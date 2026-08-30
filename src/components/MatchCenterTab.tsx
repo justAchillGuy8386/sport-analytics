@@ -21,14 +21,19 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     selectedMatchId || matchDataList[0].id
   );
 
-  // Sync activeMatchId if selectedMatchId changes or matches update
+  // Sync activeMatchId ONLY when parent explicitly changes selectedMatchId prop
   useEffect(() => {
     if (selectedMatchId && matchDataList.some(m => m.id === selectedMatchId)) {
       setActiveMatchId(selectedMatchId);
-    } else if (matchDataList.length > 0 && !matchDataList.some(m => m.id === activeMatchId)) {
+    }
+  }, [selectedMatchId]);
+
+  // Ensure activeMatchId is valid when match list loads/updates
+  useEffect(() => {
+    if (matchDataList.length > 0 && !matchDataList.some(m => m.id === activeMatchId)) {
       setActiveMatchId(matchDataList[0].id);
     }
-  }, [selectedMatchId, matches, activeMatchId]);
+  }, [matches]);
 
   const activeMatch = matchDataList.find(m => m.id === activeMatchId) || matchDataList[0];
   const { homeTeam, awayTeam, homeScore, awayScore, stats, events, lineups } = activeMatch;

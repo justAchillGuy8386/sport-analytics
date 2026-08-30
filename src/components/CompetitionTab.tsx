@@ -1,27 +1,97 @@
 'use client';
 
-import React, { useState } from 'react';
-import { COMPETITIONS, STANDINGS_DATA, MATCHES } from '@/data/mockData';
-import { LeagueCode } from '@/types/football';
+import React, { useState, useEffect } from 'react';
+import { COMPETITIONS, STANDINGS_DATA } from '@/data/mockData';
+import { LeagueCode, StandingItem } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
-import { Trophy, TrendingUp, Calendar, CheckCircle, XCircle, MinusCircle, Award } from 'lucide-react';
+import { useFootball } from '@/context/FootballContext';
+import { Trophy, Calendar, Sparkles } from 'lucide-react';
 
 interface CompetitionTabProps {
   selectedLeague: LeagueCode | 'ALL';
   onSelectMatch: (matchId: string) => void;
 }
 
+const STANDINGS_CACHE_TTL = 30 * 60 * 1000; // 30 minutes persistent cache
+
 export const CompetitionTab: React.FC<CompetitionTabProps> = ({
   selectedLeague,
   onSelectMatch
 }) => {
+  const { matches, apiKey, isRealDataMode } = useFootball();
+
   const [activeLeague, setActiveLeague] = useState<LeagueCode>(
     selectedLeague === 'ALL' ? 'PL' : selectedLeague
   );
 
+  const [standings, setStandings] = useState<StandingItem[]>(STANDINGS_DATA[activeLeague] || []);
+  const [isLoadingStandings, setIsLoadingStandings] = useState<boolean>(false);
+  const [isRealStandings, setIsRealStandings] = useState<boolean>(false);
+
+  // Fetch real standings whenever activeLeague or API key changes (With localStorage persistence)
+  useEffect(() => {
+    async function loadStandings() {
+      if (!isRealDataMode || !apiKey) {
+        setStandings(STANDINGS_DATA[activeLeague] || []);
+        setIsRealStandings(false);
+        return;
+      }
+
+      // Check localStorage persistent cache first
+      const cacheKey = `fb_standings_${activeLeague}`;
+      const cacheTimeKey = `fb_standings_time_${activeLeague}`;
+
+      try {
+        const cachedData = localStorage.getItem(cacheKey);
+        const cachedTime = localStorage.getItem(cacheTimeKey);
+        const now = Date.now();
+
+        if (cachedData && cachedTime && (now - parseInt(cachedTime) < STANDINGS_CACHE_TTL)) {
+          const parsed: StandingItem[] = JSON.parse(cachedData);
+          if (parsed && parsed.length > 0) {
+            setStandings(parsed);
+            setIsRealStandings(true);
+            setIsLoadingStandings(false);
+            return; // Loaded from localStorage! 0 API requests used.
+          }
+        }
+      } catch (e) {
+        console.error('Error reading standings localStorage:', e);
+      }
+
+      setIsLoadingStandings(true);
+      try {
+        const res = await fetch(`/api/football/standings?league=${activeLeague}&apiKey=${encodeURIComponent(apiKey)}`);
+        const result = await res.json();
+        if (result.success && result.data && result.data.length > 0) {
+          setStandings(result.data);
+          setIsRealStandings(true);
+
+          // Save to localStorage
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(result.data));
+            localStorage.setItem(cacheTimeKey, Date.now().toString());
+          } catch (e) {
+            console.error('Error saving standings to localStorage:', e);
+          }
+        } else {
+          setStandings(STANDINGS_DATA[activeLeague] || []);
+          setIsRealStandings(false);
+        }
+      } catch (err) {
+        console.error('Error loading standings API:', err);
+        setStandings(STANDINGS_DATA[activeLeague] || []);
+        setIsRealStandings(false);
+      } finally {
+        setIsLoadingStandings(false);
+      }
+    }
+
+    loadStandings();
+  }, [activeLeague, apiKey, isRealDataMode]);
+
   const competition = COMPETITIONS.find(c => c.id === activeLeague) || COMPETITIONS[0];
-  const standings = STANDINGS_DATA[activeLeague] || [];
-  const leagueMatches = MATCHES.filter(m => m.leagueId === activeLeague);
+  const leagueMatches = matches.filter(m => m.leagueId === activeLeague);
 
   return (
     <div className="space-y-6">
@@ -33,12 +103,12 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
             onClick={() => setActiveLeague(comp.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeLeague === comp.id
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/10 font-bold'
                 : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
             }`}
           >
             <span className="text-base">{comp.flag}</span>
-            <span className="font-bold">{comp.name}</span>
+            <span>{comp.name}</span>
           </button>
         ))}
       </div>
@@ -57,7 +127,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
               </span>
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Quốc gia: <strong>{competition.country}</strong> • Quy mô: <strong>{competition.totalTeams} Đội bóng</strong>
+              Quốc gia: <strong>{competition.country}</strong> • Quy mô: <strong>{standings.length || competition.totalTeams} Đội bóng</strong>
             </p>
           </div>
         </div>
@@ -65,7 +135,16 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
         <div className="flex items-center gap-3 text-xs">
           <div className="bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-center">
             <span className="text-slate-500 block">Số Trận Đã Đấu</span>
-            <strong className="text-white font-mono text-sm">{leagueMatches.filter(m => m.status === 'FINISHED').length} Trận</strong>
+            <strong className="text-white font-mono text-sm">
+              {leagueMatches.filter(m => m.status === 'FINISHED').length} Trận
+            </strong>
+          </div>
+
+          <div className="bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-center">
+            <span className="text-slate-500 block">Nguồn Dữ Liệu</span>
+            <strong className={`text-xs font-mono font-bold ${isRealStandings ? 'text-emerald-400' : 'text-amber-400'}`}>
+              {isRealStandings ? '🟢 Real API-Football' : '🟡 Mock Snapshot'}
+            </strong>
           </div>
         </div>
       </div>
@@ -76,9 +155,17 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
           <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Trophy className="w-4 h-4 text-emerald-400" />
-              <span>Bảng Xếp Hạng Chi Tiết (Standings Snapshot)</span>
+              <span>Bảng Xếp Hạng Chi Tiết ({competition.name})</span>
             </h3>
-            <span className="text-[11px] text-slate-400 font-mono">Snapshot 2026/27</span>
+            {isLoadingStandings ? (
+              <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Đang tải BXH...</span>
+            ) : isRealStandings ? (
+              <span className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Live Standings API
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-400 font-mono">Demo Snapshot</span>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -100,13 +187,15 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {standings.map((item) => (
-                  <tr key={item.team.id} className="hover:bg-slate-800/40 transition-colors">
+                  <tr key={item.team.id || item.rank} className="hover:bg-slate-800/40 transition-colors">
                     <td className="py-3 px-3 text-center font-bold">
                       <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
                         item.rank === 1
                           ? 'bg-amber-400/20 text-amber-300 font-bold border border-amber-400/40'
                           : item.rank <= 4
                           ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                          : item.rank >= (standings.length - 3)
+                          ? 'bg-red-500/20 text-red-300 font-semibold'
                           : 'text-slate-400'
                       }`}>
                         {item.rank}
@@ -164,7 +253,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
             <div className="space-y-3">
               {leagueMatches.length === 0 ? (
                 <p className="text-xs text-slate-500 italic py-6 text-center">
-                  Đang cập nhật lịch thi đấu mới cho giải này...
+                  Đang cập nhật lịch thi đấu từ API-Football...
                 </p>
               ) : (
                 leagueMatches.map(m => (
@@ -208,8 +297,8 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
           </div>
 
           <div className="mt-4 pt-4 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Standings views: <code>vw_competition_summary</code></span>
-            <span className="text-emerald-400 font-medium">Idempotent Sync</span>
+            <span>Standings views: <code>API-Football /standings</code></span>
+            <span className="text-emerald-400 font-medium">Real-time Data</span>
           </div>
         </div>
       </div>

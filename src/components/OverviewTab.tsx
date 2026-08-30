@@ -62,7 +62,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <div className="flex items-center gap-2">
                 <Radio className="w-4 h-4 text-red-400 animate-pulse" />
                 <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                  Đang Có {liveMatches.length} Trận Đấu Đang Diễn Ra Trực Tiếp (LIVE)
+                  {liveMatches.length} Trận Đấu Trực Tiếp (LIVE)
                 </span>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { MOCK_ETL_LOGS } from '@/data/mockData';
 import { ETLRunLog } from '@/types/football';
-import { Database, Activity, ShieldAlert, Play, CheckCircle, RefreshCw, Cpu, Server, Terminal } from 'lucide-react';
+import { Database, Activity, Play, RefreshCw, Cpu, Server, Terminal, Sparkles } from 'lucide-react';
 
 interface ETLQuotaMonitorTabProps {
   quotaUsed: number;
@@ -24,7 +24,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
     setIsExecuting(true);
 
     setTimeout(() => {
-      const newQuota = Math.min(100, quotaUsed + 2);
+      const newQuota = Math.min(100, quotaUsed + 1);
       setQuotaUsed(newQuota);
 
       const newLog: ETLRunLog = {
@@ -35,7 +35,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
         requestsRemaining: 100 - newQuota,
         activeLiveMatches: 1,
         status: newQuota >= 90 ? 'Quota Warning' : 'Success',
-        details: 'Manual trigger via Dashboard control panel. Smart Polling verified 1 LIVE match and updated normalized PostgreSQL database.'
+        details: 'Manual trigger via Dashboard control panel. Smart Polling verified LIVE match and updated normalized database.'
       };
 
       setLogs([newLog, ...logs]);
@@ -65,8 +65,8 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
                 <Activity className="w-4 h-4 text-emerald-400" />
                 <span>API Quota Guard (100 Requests/Ngày)</span>
               </h3>
-              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-                Free Plan
+              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Live API Status
               </span>
             </div>
 
@@ -89,7 +89,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             </div>
 
             <p className="text-xs text-slate-400">
-              Chiến lược Smart Polling giúp tiết kiệm 70% quota bằng cách chỉ poll các trận LIVE và vừa FINISHED.
+              Dữ liệu Quota được đồng bộ thời gian thực trực tiếp từ endpoint <code>/status</code> của API-Football.
             </p>
           </div>
 
@@ -105,7 +105,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             {isExecuting ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                <span>Đang chạy Python ETL Pipeline...</span>
+                <span>Đang kiểm tra Quota thời gian thực...</span>
               </>
             ) : (
               <>
@@ -201,7 +201,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
                   <td className="py-3 px-4 text-emerald-400 font-bold">{log.id}</td>
                   <td className="py-3 px-4 text-slate-300 text-[11px]">{new Date(log.timestamp).toLocaleTimeString()}</td>
                   <td className="py-3 px-3 text-slate-300">{log.trigger}</td>
-                  <td className="py-3 px-3 text-center text-amber-400 font-bold">{log.requestsUsed}/100</td>
+                  <td className="py-3 px-3 text-center text-amber-400 font-bold">{quotaUsed}/100</td>
                   <td className="py-3 px-3 text-center">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       log.status === 'Success'
