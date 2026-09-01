@@ -20,10 +20,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: Install Supabase and WebSocket dependencies
+        run: npm install @supabase/supabase-js ws --no-save
 
       - name: Sync API-Football Matches to Supabase
         env:

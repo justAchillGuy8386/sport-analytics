@@ -22,12 +22,18 @@ const SUPABASE_SERVICE_ROLE_KEY = cleanString(process.env.SUPABASE_SERVICE_ROLE_
 
 console.log('🔗 Connecting to Supabase URL:', SUPABASE_URL);
 
+// Options to disable realtime websocket in Node.js background environment
+const clientOptions = {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  realtime: { timeout: 1000 }
+};
+
 let supabase;
 try {
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, clientOptions);
 } catch (err) {
   console.error('⚠️ Supabase client creation error, falling back to default key:', err.message);
-  supabase = createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY);
+  supabase = createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY, clientOptions);
 }
 
 const LEAGUE_MAP = {
