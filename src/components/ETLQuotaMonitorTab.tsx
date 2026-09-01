@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MOCK_ETL_LOGS } from '@/data/mockData';
 import { ETLRunLog } from '@/types/football';
-import { Database, Activity, Play, RefreshCw, Cpu, Server, Terminal, Sparkles } from 'lucide-react';
+import { useFootball } from '@/context/FootballContext';
+import { Database, Activity, Play, RefreshCw, Cpu, Server, Terminal, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface ETLQuotaMonitorTabProps {
   quotaUsed: number;
@@ -14,33 +14,50 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
   quotaUsed,
   setQuotaUsed
 }) => {
-  const [logs, setLogs] = useState<ETLRunLog[]>(MOCK_ETL_LOGS);
+  const { refreshQuota, apiKey } = useFootball();
+  const [logs, setLogs] = useState<ETLRunLog[]>([]);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string>('');
 
   const remainingQuota = 100 - quotaUsed;
 
-  const handleTriggerETL = () => {
+  const handleTriggerETL = async () => {
     if (quotaUsed >= 100) return;
     setIsExecuting(true);
+    setSyncStatusMsg('');
 
-    setTimeout(() => {
-      const newQuota = Math.min(100, quotaUsed + 1);
-      setQuotaUsed(newQuota);
+    try {
+      // Call admin sync endpoint to fetch fresh matches from API-Football & save straight to Supabase DB
+      const res = await fetch('/api/admin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey })
+      });
+      const data = await res.json();
 
-      const newLog: ETLRunLog = {
-        id: `run-${105 + logs.length}`,
-        timestamp: new Date().toISOString(),
-        trigger: 'Manual',
-        requestsUsed: newQuota,
-        requestsRemaining: 100 - newQuota,
-        activeLiveMatches: 1,
-        status: newQuota >= 90 ? 'Quota Warning' : 'Success',
-        details: 'Manual trigger via Dashboard control panel. Smart Polling verified LIVE match and updated normalized database.'
-      };
-
-      setLogs([newLog, ...logs]);
+      if (data.success) {
+        setSyncStatusMsg(data.message || 'Đã nạp sạch dữ liệu mới vào Supabase DB!');
+        const newLog: ETLRunLog = {
+          id: `sync-${101 + logs.length}`,
+          timestamp: new Date().toISOString(),
+          trigger: 'Manual Admin',
+          requestsUsed: quotaUsed,
+          requestsRemaining: Math.max(0, 100 - quotaUsed),
+          activeLiveMatches: 0,
+          status: 'Success',
+          details: data.message || 'Đã nạp dữ liệu từ API-Football trực tiếp vào Supabase Database.'
+        };
+        setLogs([newLog, ...logs]);
+      } else {
+        setSyncStatusMsg(`❌ Lỗi: ${data.message || data.error}`);
+      }
+      await refreshQuota();
+    } catch (e: any) {
+      console.error(e);
+      setSyncStatusMsg(`❌ Lỗi đồng bộ: ${e.message}`);
+    } finally {
       setIsExecuting(false);
-    }, 1200);
+    }
   };
 
   const SQL_VIEWS = [
@@ -65,9 +82,13 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
                 <Activity className="w-4 h-4 text-emerald-400" />
                 <span>API Quota Guard (100 Requests/Ngày)</span>
               </h3>
-              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Live API Status
-              </span>
+              <button 
+                onClick={() => refreshQuota()} 
+                title="Làm mới Quota thực tế từ database"
+                className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1 hover:bg-emerald-500/20 transition-all cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3 animate-spin-slow" /> Đồng bộ API
+              </button>
             </div>
 
             <div className="my-4">
@@ -89,9 +110,16 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             </div>
 
             <p className="text-xs text-slate-400">
-              Dữ liệu Quota được đồng bộ thời gian thực trực tiếp từ endpoint <code>/status</code> của API-Football.
+              Dữ liệu Quota được đọc trực tiếp từ HTTP Response Headers &amp; endpoint <code>/status</code> thực tế của API-Football.
             </p>
           </div>
+
+          {syncStatusMsg && (
+            <div className="mt-3 p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{syncStatusMsg}</span>
+            </div>
+          )}
 
           <button
             onClick={handleTriggerETL}
@@ -105,12 +133,12 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             {isExecuting ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                <span>Đang kiểm tra Quota thời gian thực...</span>
+                <span>Đang nạp dữ liệu từ API-Football vào Supabase DB...</span>
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 fill-slate-950" />
-                <span>Kích Hoạt Manual ETL Job (Simulate GitHub Actions)</span>
+                <span>⚡ Nạp Trận Đấu Mới Vào Supabase DB</span>
               </>
             )}
           </button>
@@ -120,7 +148,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
         <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
             <Cpu className="w-4 h-4 text-cyan-400" />
-            <span>Mô Hình Smart Polling & Data Lifecycle (Section 5)</span>
+            <span>Mô Hình Smart Polling &amp; Data Lifecycle (Section 5)</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
@@ -132,7 +160,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
 
             <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-xl">
               <span className="text-red-400 font-bold block mb-1 animate-pulse">LIVE (Ưu tiên)</span>
-              <p className="text-slate-300 text-[11px]">Poll 15-30 phút/lần cho các trận đang đá.</p>
+              <p className="text-slate-300 text-[11px]">Poll 10-15 phút/lần cho các trận đang đá.</p>
               <span className="text-[10px] text-red-300 mt-2 block font-mono">Quota cost: Priority</span>
             </div>
 
@@ -151,7 +179,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
 
           <div className="mt-4 p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-400 font-mono flex items-center gap-2">
             <Terminal className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Scheduled Cron: <code>cron: "*/15 * * * *"</code> via GitHub Actions scheduled workflow.</span>
+            <span>Scheduled Cron: <code>cron: "*/10 11-23 * * *"</code> via GitHub Actions scheduled workflow.</span>
           </div>
         </div>
       </div>
@@ -178,45 +206,51 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
         <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Database className="w-4 h-4 text-emerald-400" />
-            <span>Nhật Ký ETL Pipeline & Smart Polling (etl_runs)</span>
+            <span>Nhật Ký ETL Pipeline &amp; Smart Polling (etl_runs)</span>
           </h3>
           <span className="text-xs text-slate-400 font-mono">Total Runs: {logs.length}</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
-              <tr>
-                <th className="py-3 px-4">Run ID</th>
-                <th className="py-3 px-4">Thời Gian</th>
-                <th className="py-3 px-3">Trigger</th>
-                <th className="py-3 px-3 text-center">Request Đã Dùng</th>
-                <th className="py-3 px-3 text-center">Trạng Thái</th>
-                <th className="py-3 px-4">Chi Tiết Exec Log</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono">
-              {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-4 text-emerald-400 font-bold">{log.id}</td>
-                  <td className="py-3 px-4 text-slate-300 text-[11px]">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                  <td className="py-3 px-3 text-slate-300">{log.trigger}</td>
-                  <td className="py-3 px-3 text-center text-amber-400 font-bold">{quotaUsed}/100</td>
-                  <td className="py-3 px-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      log.status === 'Success'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-amber-500/20 text-amber-400'
-                    }`}>
-                      {log.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-400 text-[11px] font-sans">{log.details}</td>
+        {logs.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-xs italic">
+            Chưa có nhật ký Manual ETL Run nào. Bấm nút "⚡ Nạp Trận Đấu Mới Vào Supabase DB" ở trên để nạp trận mới nhất.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="py-3 px-4">Run ID</th>
+                  <th className="py-3 px-4">Thời Gian</th>
+                  <th className="py-3 px-3">Trigger</th>
+                  <th className="py-3 px-3 text-center">Request Đã Dùng</th>
+                  <th className="py-3 px-3 text-center">Trạng Thái</th>
+                  <th className="py-3 px-4">Chi Tiết Exec Log</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {logs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 text-emerald-400 font-bold">{log.id}</td>
+                    <td className="py-3 px-4 text-slate-300 text-[11px]">{new Date(log.timestamp).toLocaleTimeString()}</td>
+                    <td className="py-3 px-3 text-slate-300">{log.trigger}</td>
+                    <td className="py-3 px-3 text-center text-amber-400 font-bold">{quotaUsed}/100</td>
+                    <td className="py-3 px-3 text-center">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        log.status === 'Success'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {log.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-400 text-[11px] font-sans">{log.details}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
