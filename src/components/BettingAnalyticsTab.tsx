@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { calculateAsianHandicap, calculateOverUnder } from '@/utils/handicapSettlement';
 import { HandicapResult } from '@/types/football';
-import { MATCHES } from '@/data/mockData';
+import { useFootball } from '@/context/FootballContext';
 import { Calculator, Percent, TrendingUp, ShieldCheck, HelpCircle, ArrowRightLeft } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 export const BettingAnalyticsTab: React.FC = () => {
+  const { matches } = useFootball();
+
   // Asian Handicap Calculator State
   const [calcHomeScore, setCalcHomeScore] = useState<number>(2);
   const [calcAwayScore, setCalcAwayScore] = useState<number>(1);
@@ -34,9 +36,9 @@ export const BettingAnalyticsTab: React.FC = () => {
     ouSelection
   );
 
-  // Sample match for odds movement chart
-  const sampleMatch = MATCHES[0];
-  const oddsHistoryData = sampleMatch.oddsHistory || [];
+  // Get real match odds history if available from API
+  const sampleMatch = matches.find(m => m.oddsHistory && m.oddsHistory.length > 0) || matches[0];
+  const oddsHistoryData = sampleMatch?.oddsHistory || [];
 
   const getResultBadge = (result: HandicapResult) => {
     switch (result) {
@@ -62,7 +64,7 @@ export const BettingAnalyticsTab: React.FC = () => {
             <Calculator className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Betting Analytics & Asian Handicap Settlement Engine</h2>
+            <h2 className="text-xl font-bold text-white">Betting Analytics &amp; Asian Handicap Settlement Engine</h2>
             <p className="text-xs text-slate-400 mt-0.5">
               Module tính toán kết quả kèo Châu Á (quarter-ball `-0.25`, `-0.75`), Tài/Xỉu và phân tích biến động Odds theo chuẩn Section 10 của Spec.
             </p>
@@ -257,27 +259,29 @@ export const BettingAnalyticsTab: React.FC = () => {
       </div>
 
       {/* Line Movement Tracker */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <ArrowRightLeft className="w-4 h-4 text-emerald-400" />
-          <span>Theo Dõi Biến Động Odds Trước Trận (Odds Line Movement Tracker)</span>
-        </h3>
+      {oddsHistoryData.length > 0 && (
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
+          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <ArrowRightLeft className="w-4 h-4 text-emerald-400" />
+            <span>Theo Dõi Biến Động Odds Trước Trận (Odds Line Movement Tracker)</span>
+          </h3>
 
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={oddsHistoryData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-              <XAxis dataKey="timestamp" stroke="#94a3b8" fontSize={12} />
-              <YAxis stroke="#94a3b8" fontSize={12} domain={['auto', 'auto']} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} />
-              <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-              <Line type="monotone" dataKey="homeWin" name="Chủ thắng (Home Win)" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="draw" name="Hòa (Draw)" stroke="#8b5cf6" strokeWidth={2} />
-              <Line type="monotone" dataKey="awayWin" name="Khách thắng (Away Win)" stroke="#06b6d4" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={oddsHistoryData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                <XAxis dataKey="timestamp" stroke="#94a3b8" fontSize={12} />
+                <YAxis stroke="#94a3b8" fontSize={12} domain={['auto', 'auto']} />
+                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} />
+                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Line type="monotone" dataKey="homeWin" name="Chủ thắng (Home Win)" stroke="#10b981" strokeWidth={2} />
+                <Line type="monotone" dataKey="draw" name="Hòa (Draw)" stroke="#8b5cf6" strokeWidth={2} />
+                <Line type="monotone" dataKey="awayWin" name="Khách thắng (Away Win)" stroke="#06b6d4" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
