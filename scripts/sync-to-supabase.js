@@ -55,13 +55,13 @@ async function syncMatches() {
 
   let allFixtures = [];
 
-  // 1. Always fetch LIVE matches first (Consumes ONLY 1 API request)
+  // 1. Fetch LIVE matches
   try {
     const liveRes = await fetch('https://v3.football.api-sports.io/fixtures?live=all', { headers });
     if (liveRes.ok) {
       const liveData = await liveRes.json();
       if (liveData.response && Array.isArray(liveData.response)) {
-        console.log(`⚽ Found ${liveData.response.length} total live matches.`);
+        console.log(`⚽ Found ${liveData.response.length} live matches.`);
         const targetIds = Object.values(LEAGUE_MAP);
         const filteredLive = liveData.response.filter(item => targetIds.includes(item.league?.id));
         allFixtures.push(...filteredLive);
@@ -71,22 +71,33 @@ async function syncMatches() {
     console.error('Error fetching live matches:', err.message);
   }
 
-  // 2. Only if no live matches exist, fetch recent finished fixtures (1 request per league for top leagues only)
-  if (allFixtures.length === 0) {
-    const mainLeagues = ['PL', 'LL', 'SA']; // Top 3 leagues to stay quota friendly
-    for (const code of mainLeagues) {
-      const lId = LEAGUE_MAP[code];
-      try {
-        const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${lId}&season=2024&last=3`, { headers });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.response && Array.isArray(data.response)) {
-            allFixtures.push(...data.response);
-          }
+  // 2. Fetch Recent Past & Upcoming Fixtures for Top Leagues (Premier League, La Liga, Serie A)
+  const targetLeagues = [39, 140, 135]; // PL, LL, SA
+  for (const lId of targetLeagues) {
+    // Fetch upcoming fixtures
+    try {
+      const nextRes = await fetch(`https://v3.football.api-sports.io/fixtures?league=${lId}&next=5`, { headers });
+      if (nextRes.ok) {
+        const nextData = await nextRes.json();
+        if (nextData.response && Array.isArray(nextData.response)) {
+          allFixtures.push(...nextData.response);
         }
-      } catch (e) {
-        console.error(`Error fetching league ${code}:`, e.message);
       }
+    } catch (e) {
+      console.error(`Error fetching upcoming fixtures for league ${lId}:`, e.message);
+    }
+
+    // Fetch past fixtures
+    try {
+      const lastRes = await fetch(`https://v3.football.api-sports.io/fixtures?league=${lId}&last=5`, { headers });
+      if (lastRes.ok) {
+        const lastData = await lastRes.json();
+        if (lastData.response && Array.isArray(lastData.response)) {
+          allFixtures.push(...lastData.response);
+        }
+      }
+    } catch (e) {
+      console.error(`Error fetching past fixtures for league ${lId}:`, e.message);
     }
   }
 
@@ -95,7 +106,7 @@ async function syncMatches() {
     return;
   }
 
-  // Deduplicate
+  // Deduplicate by fixture ID
   const uniqueMap = new Map();
   for (const item of allFixtures) {
     if (item.fixture?.id) {
@@ -103,7 +114,7 @@ async function syncMatches() {
     }
   }
   const uniqueFixtures = Array.from(uniqueMap.values());
-  console.log(`📦 Deduplicated ${uniqueFixtures.length} unique matches to save.`);
+  console.log(`📦 Deduplicated ${uniqueFixtures.length} total matches to insert into Supabase.`);
 
   // Map to Supabase table schema
   const rows = uniqueFixtures.map(item => {
@@ -136,7 +147,7 @@ async function syncMatches() {
     };
   });
 
-  // Upsert into Supabase
+  // Upsert into Supabase matches table
   try {
     const { data, error } = await supabase
       .from('matches')
@@ -145,7 +156,7 @@ async function syncMatches() {
     if (error) {
       console.error('❌ Supabase upsert error:', error.message);
     } else {
-      console.log(`✅ Successfully upserted ${rows.length} matches into Supabase!`);
+      console.log(`✅ Successfully upserted ${rows.length} matches into Supabase Database!`);
     }
   } catch (err) {
     console.error('❌ Database connection exception:', err.message);
@@ -159,5 +170,5 @@ syncMatches()
   })
   .catch(e => {
     console.error('Sync process exception:', e);
-    process.exit(0); // Exit safely to prevent workflow failure
+    process.exit(0);
   });
