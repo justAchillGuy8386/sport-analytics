@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useFootball } from '@/context/FootballContext';
-import { COMPETITIONS } from '@/data/mockData';
-import { LeagueCode } from '@/types/football';
+import { COMPETITIONS } from '@/constants/competitions';
 import { 
   BarChart3, Trophy, Users, Swords, Calculator, Database, 
   Key, Activity, X, Menu, Radio, Sparkles
@@ -180,7 +179,7 @@ export const Sidebar: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Key className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isRealDataMode ? '🟢 LIVE API-Football' : '🟡 Demo Mock Data'}</span>
+              <span>{isRealDataMode ? '🟢 LIVE API-Football' : '⚪ Real Data Mode'}</span>
             </div>
             <span className="text-[10px] text-slate-500 underline">Cấu hình</span>
           </button>
