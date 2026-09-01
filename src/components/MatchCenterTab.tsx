@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MATCHES as MOCK_MATCHES } from '@/data/mockData';
 import { Match } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { Swords, Clock, MapPin, User, Activity, AlertCircle } from 'lucide-react';
@@ -15,10 +14,10 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
   matches,
   selectedMatchId
 }) => {
-  const matchDataList = matches && matches.length > 0 ? matches : MOCK_MATCHES;
+  const matchDataList = matches || [];
 
   const [activeMatchId, setActiveMatchId] = useState<string>(
-    selectedMatchId || matchDataList[0].id
+    selectedMatchId || matchDataList[0]?.id || ''
   );
 
   // Sync activeMatchId ONLY when parent explicitly changes selectedMatchId prop
@@ -35,6 +34,16 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     }
   }, [matches]);
 
+  if (!matches || matches.length === 0) {
+    return (
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-3">
+        <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
+        <p className="text-sm font-medium">Hiện không có trận đấu nào được chọn.</p>
+        <p className="text-xs text-slate-500">Vui lòng quay lại Tổng quan hoặc chọn bộ lọc giải đấu ở thanh điều hướng bên trái.</p>
+      </div>
+    );
+  }
+
   const activeMatch = matchDataList.find(m => m.id === activeMatchId) || matchDataList[0];
   const { homeTeam, awayTeam, homeScore, awayScore, stats, events, lineups } = activeMatch;
 
@@ -48,43 +57,40 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             onClick={() => setActiveMatchId(m.id)}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs font-medium transition-all whitespace-nowrap ${
               activeMatchId === m.id
-                ? 'bg-slate-800 border-emerald-500/50 text-white shadow-lg shadow-emerald-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold shadow-lg shadow-emerald-500/10'
+                : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${
-              m.status === 'LIVE' ? 'bg-red-500 animate-ping' : m.status === 'FINISHED' ? 'bg-slate-500' : 'bg-emerald-400'
-            }`}></span>
-            <div className="flex items-center gap-1.5 font-bold">
-              <span>{m.homeTeam.shortName || m.homeTeam.name.substring(0, 3)}</span>
-              <span className="text-emerald-400 font-mono">
-                {m.homeScore !== null ? `${m.homeScore}-${m.awayScore}` : 'VS'}
-              </span>
-              <span>{m.awayTeam.shortName || m.awayTeam.name.substring(0, 3)}</span>
-            </div>
-            <span className="text-[10px] bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">{m.leagueId}</span>
+            <span className="flex items-center gap-1.5 font-semibold text-white">
+              {m.homeTeam.shortName} vs {m.awayTeam.shortName}
+            </span>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              m.status === 'LIVE' ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-800 text-slate-300'
+            }`}>
+              {m.status === 'LIVE' ? `${m.elapsedTime}'` : m.status}
+            </span>
           </button>
         ))}
       </div>
 
-      {/* Main Scoreboard Header Banner */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex items-center justify-between text-xs text-slate-400 mb-6 border-b border-slate-800/80 pb-3">
+      {/* Match Header Scoreboard */}
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="flex items-center justify-between text-xs text-slate-400 mb-6 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <span className="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded border border-emerald-500/30">
+            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded font-bold font-mono">
               {activeMatch.leagueId} • {activeMatch.season}
             </span>
             <span>{activeMatch.round}</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-slate-500" />
-              {activeMatch.venue || 'Stadium'}
+              {activeMatch.venue}
             </span>
             <span className="flex items-center gap-1">
               <User className="w-3.5 h-3.5 text-slate-500" />
-              Trọng tài: {activeMatch.referee || 'Official'}
+              {activeMatch.referee}
             </span>
           </div>
         </div>
@@ -92,178 +98,180 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
         {/* Score Display */}
         <div className="grid grid-cols-3 items-center text-center my-4">
           {/* Home Team */}
-          <div className="flex flex-col items-center">
-            <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 mb-2 shadow-inner flex items-center justify-center">
-              <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-12 h-12" />
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
+            <span className="text-base sm:text-2xl font-black text-white order-2 sm:order-1">{homeTeam.name}</span>
+            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 order-1 sm:order-2">
+              <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-10 h-10 sm:w-14 sm:h-14" />
             </div>
-            <h3 className="font-extrabold text-white text-base sm:text-xl">{homeTeam.name}</h3>
-            <span className="text-xs text-slate-500 font-semibold">{homeTeam.stadium || 'Chủ Nhà'}</span>
           </div>
 
           {/* Score & Status */}
           <div className="flex flex-col items-center">
-            <div className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3 ${
-              activeMatch.status === 'LIVE'
-                ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
-                : activeMatch.status === 'FINISHED'
-                ? 'bg-slate-800 text-slate-300 border border-slate-700'
-                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-            }`}>
-              {activeMatch.status === 'LIVE' ? `Đang diễn ra (${activeMatch.elapsedTime}')` : activeMatch.status}
-            </div>
+            {activeMatch.status === 'FINISHED' || activeMatch.status === 'LIVE' ? (
+              <div className="text-3xl sm:text-5xl font-black text-white font-mono tracking-wider flex items-center gap-3">
+                <span>{homeScore}</span>
+                <span className="text-emerald-500">-</span>
+                <span>{awayScore}</span>
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-slate-400 font-mono">VS</div>
+            )}
 
-            <div className="text-4xl sm:text-6xl font-black text-white font-mono tracking-tight">
-              {homeScore !== null ? `${homeScore} - ${awayScore}` : 'VS'}
+            <div className="mt-2">
+              {activeMatch.status === 'LIVE' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-bold animate-pulse">
+                  <Clock className="w-3.5 h-3.5" />
+                  LIVE • Phút {activeMatch.elapsedTime}'
+                </span>
+              ) : activeMatch.status === 'FINISHED' ? (
+                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-slate-800 text-slate-300 text-xs font-medium">
+                  Kết thúc (FT)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-medium">
+                  {new Date(activeMatch.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Away Team */}
-          <div className="flex flex-col items-center">
-            <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 mb-2 shadow-inner flex items-center justify-center">
-              <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-12 h-12" />
+          <div className="flex flex-col sm:flex-row items-center justify-start gap-3">
+            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800">
+              <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-10 h-10 sm:w-14 sm:h-14" />
             </div>
-            <h3 className="font-extrabold text-white text-base sm:text-xl">{awayTeam.name}</h3>
-            <span className="text-xs text-slate-500 font-semibold">Khách (Away)</span>
+            <span className="text-base sm:text-2xl font-black text-white">{awayTeam.name}</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Timeline Events */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
+        {/* Match Statistics Progress Bars */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-emerald-400" />
-            <span>Timeline Diễn Biến Trận Đấu (Events)</span>
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span>Thống Kê Chi Tiết Trận Đấu (Match Statistics)</span>
           </h3>
 
-          {!events || events.length === 0 ? (
-            <p className="text-xs text-slate-500 italic py-8 text-center">Chưa có sự kiện diễn ra.</p>
-          ) : (
-            <div className="space-y-3 relative before:absolute before:left-6 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-800">
-              {events.map((e) => {
-                const isHome = e.teamId === homeTeam.id;
-                return (
-                  <div key={e.id} className={`flex items-center gap-3 text-xs ${isHome ? 'flex-row' : 'flex-row-reverse'}`}>
-                    <span className="w-8 h-8 rounded-full bg-slate-950 border border-slate-800 font-mono font-bold text-emerald-400 flex items-center justify-center text-[11px] z-10">
-                      {e.time}'
-                    </span>
-
-                    <div className={`p-2.5 rounded-xl border flex items-center gap-2 max-w-xs ${
-                      e.type === 'goal'
-                        ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
-                        : e.type === 'yellow_card'
-                        ? 'bg-amber-950/40 text-amber-300 border-amber-500/30'
-                        : 'bg-slate-950 text-slate-300 border-slate-800'
-                    }`}>
-                      {e.type === 'goal' && <span>⚽</span>}
-                      {e.type === 'yellow_card' && <span className="w-2.5 h-3.5 bg-amber-400 rounded-sm"></span>}
-                      {e.type === 'red_card' && <span className="w-2.5 h-3.5 bg-red-500 rounded-sm"></span>}
-                      <div>
-                        <strong className="block font-semibold">{e.player}</strong>
-                        {e.assistPlayer && <span className="text-[10px] text-slate-400">Kiến tạo: {e.assistPlayer}</span>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="space-y-4 text-xs">
+            {/* Possession */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-emerald-400 font-mono">{stats.home.possession}%</span>
+                <span className="text-slate-400">Kiểm Soát Bóng</span>
+                <span className="font-bold text-cyan-400 font-mono">{stats.away.possession}%</span>
+              </div>
+              <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
+                <div className="bg-emerald-500 h-full" style={{ width: `${stats.home.possession}%` }}></div>
+                <div className="bg-cyan-500 h-full" style={{ width: `${stats.away.possession}%` }}></div>
+              </div>
             </div>
-          )}
+
+            {/* Total Shots */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-emerald-400 font-mono">{stats.home.shots}</span>
+                <span className="text-slate-400">Tổng Số Cú Sút</span>
+                <span className="font-bold text-cyan-400 font-mono">{stats.away.shots}</span>
+              </div>
+              <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
+                <div className="bg-emerald-500 h-full" style={{ width: `${(stats.home.shots / (stats.home.shots + stats.away.shots || 1)) * 100}%` }}></div>
+                <div className="bg-cyan-500 h-full" style={{ width: `${(stats.away.shots / (stats.home.shots + stats.away.shots || 1)) * 100}%` }}></div>
+              </div>
+            </div>
+
+            {/* Shots on Target */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-emerald-400 font-mono">{stats.home.shotsOnTarget}</span>
+                <span className="text-slate-400">Cú Sút Trúng Đích</span>
+                <span className="font-bold text-cyan-400 font-mono">{stats.away.shotsOnTarget}</span>
+              </div>
+              <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
+                <div className="bg-emerald-500 h-full" style={{ width: `${(stats.home.shotsOnTarget / (stats.home.shotsOnTarget + stats.away.shotsOnTarget || 1)) * 100}%` }}></div>
+                <div className="bg-cyan-500 h-full" style={{ width: `${(stats.away.shotsOnTarget / (stats.home.shotsOnTarget + stats.away.shotsOnTarget || 1)) * 100}%` }}></div>
+              </div>
+            </div>
+
+            {/* Corners */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-emerald-400 font-mono">{stats.home.corners}</span>
+                <span className="text-slate-400">Phạt Góc</span>
+                <span className="font-bold text-cyan-400 font-mono">{stats.away.corners}</span>
+              </div>
+              <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
+                <div className="bg-emerald-500 h-full" style={{ width: `${(stats.home.corners / (stats.home.corners + stats.away.corners || 1)) * 100}%` }}></div>
+                <div className="bg-cyan-500 h-full" style={{ width: `${(stats.away.corners / (stats.home.corners + stats.away.corners || 1)) * 100}%` }}></div>
+              </div>
+            </div>
+
+            {/* Yellow & Red Cards */}
+            <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-4 text-center">
+              <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                <span className="text-slate-400 text-[11px] block">Thẻ Vàng (Home / Away)</span>
+                <strong className="text-amber-400 font-mono text-sm">{stats.home.yellowCards} - {stats.away.yellowCards}</strong>
+              </div>
+              <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                <span className="text-slate-400 text-[11px] block">Thẻ Đỏ (Home / Away)</span>
+                <strong className="text-red-400 font-mono text-sm">{stats.home.redCards} - {stats.away.redCards}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Team Statistics Comparison */}
-        {stats && (
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
+        {/* Match Timeline & Key Events */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+          <div>
             <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-cyan-400" />
-              <span>So Sánh Thống Kê Chi Tiết (Team Statistics)</span>
+              <Swords className="w-4 h-4 text-amber-400" />
+              <span>Diễn Biến Chính Trận Đấu (Match Timeline)</span>
             </h3>
 
-            <div className="space-y-4 text-xs">
-              {[
-                { label: 'Kiểm soát bóng (%)', homeVal: stats.home.possession, awayVal: stats.away.possession, unit: '%' },
-                { label: 'Tổng số cú sút', homeVal: stats.home.shots, awayVal: stats.away.shots },
-                { label: 'Cú sút trúng đích', homeVal: stats.home.shotsOnTarget, awayVal: stats.away.shotsOnTarget },
-                { label: 'Số quả phạt góc', homeVal: stats.home.corners, awayVal: stats.away.corners },
-                { label: 'Phạm lỗi (Fouls)', homeVal: stats.home.fouls, awayVal: stats.away.fouls },
-                { label: 'Thẻ vàng', homeVal: stats.home.yellowCards, awayVal: stats.away.yellowCards }
-              ].map((item, idx) => {
-                const total = (item.homeVal + item.awayVal) || 1;
-                const homePct = Math.round((item.homeVal / total) * 100);
-                return (
-                  <div key={idx}>
-                    <div className="flex justify-between font-semibold mb-1 text-slate-300">
-                      <span className="text-emerald-400 font-mono">{item.homeVal}{item.unit || ''}</span>
-                      <span className="text-slate-400">{item.label}</span>
-                      <span className="text-cyan-400 font-mono">{item.awayVal}{item.unit || ''}</span>
+            <div className="space-y-3 relative before:absolute before:left-1/2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+              {events && events.length > 0 ? (
+                events.map((ev) => {
+                  const isHomeEvent = ev.teamId === homeTeam.id;
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`flex items-center text-xs ${
+                        isHomeEvent ? 'justify-start' : 'justify-end'
+                      }`}
+                    >
+                      <div className={`w-1/2 flex items-center gap-2 ${isHomeEvent ? 'pr-4 justify-end text-right' : 'pl-4 justify-start text-left'}`}>
+                        {isHomeEvent && (
+                          <div>
+                            <span className="font-bold text-white block">{ev.player}</span>
+                            <span className="text-[10px] text-slate-400">{ev.type}</span>
+                          </div>
+                        )}
+                        <span className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-mono font-bold text-emerald-400 shrink-0">
+                          {ev.time}'
+                        </span>
+                        {!isHomeEvent && (
+                          <div>
+                            <span className="font-bold text-white block">{ev.player}</span>
+                            <span className="text-[10px] text-slate-400">{ev.type}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-
-                    <div className="w-full bg-slate-950 h-2 rounded-full flex overflow-hidden border border-slate-800">
-                      <div className="bg-emerald-500 h-full" style={{ width: `${homePct}%` }}></div>
-                      <div className="bg-cyan-500 h-full" style={{ width: `${100 - homePct}%` }}></div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <p className="text-xs text-slate-500 italic text-center py-8">
+                  Chưa có sự kiện thẻ/bàn thắng được ghi nhận.
+                </p>
+              )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Pitch Lineups Grid if available */}
-      {lineups && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <User className="w-4 h-4 text-emerald-400" />
-            <span>Đội Hình Ra Sân (Lineups & Formations)</span>
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Home Lineup */}
-            <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl">
-              <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-5 h-5" /> {homeTeam.name}
-                </span>
-                <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">
-                  {lineups.home.formation}
-                </span>
-              </div>
-
-              <div className="space-y-1.5 text-xs">
-                {lineups.home.starters.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-1.5 rounded hover:bg-slate-800/50">
-                    <span className="font-mono text-slate-400 w-6">#{p.number}</span>
-                    <span className="text-white font-medium flex-1">{p.name}</span>
-                    <span className="text-[10px] text-emerald-400 font-mono uppercase bg-slate-900 px-1.5 py-0.5 rounded">{p.position}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Away Lineup */}
-            <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl">
-              <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-5 h-5" /> {awayTeam.name}
-                </span>
-                <span className="text-xs font-mono bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">
-                  {lineups.away.formation}
-                </span>
-              </div>
-
-              <div className="space-y-1.5 text-xs">
-                {lineups.away.starters.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-1.5 rounded hover:bg-slate-800/50">
-                    <span className="font-mono text-slate-400 w-6">#{p.number}</span>
-                    <span className="text-white font-medium flex-1">{p.name}</span>
-                    <span className="text-[10px] text-cyan-400 font-mono uppercase bg-slate-900 px-1.5 py-0.5 rounded">{p.position}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500 font-mono text-center">
+            Events Data Source: API-Football Live Feeds
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
