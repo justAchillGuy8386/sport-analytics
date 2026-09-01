@@ -14,22 +14,32 @@ export const LEAGUE_MAP: Record<LeagueCode, { id: number; name: string }> = {
 
 export const ALLOWED_LEAGUE_IDS = [39, 140, 135, 78, 61, 2];
 
-// In-Memory Cache Store with TTL to save API Quota
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
+// Global Quota Tracker updated dynamically on every single API response header
+let globalQuotaStatus = { current: 0, limit: 100 };
+
+export function getGlobalQuotaStatus() {
+  return globalQuotaStatus;
 }
 
-const FIXTURES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const STANDINGS_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-
-const fixturesCache = new Map<string, CacheEntry<Match[]>>();
-const standingsCache = new Map<string, CacheEntry<StandingItem[]>>();
+export function updateQuotaFromHeaders(res: Response) {
+  try {
+    const remainingStr = res.headers.get('x-ratelimit-requests-remaining');
+    const limitStr = res.headers.get('x-ratelimit-requests-limit');
+    if (remainingStr !== null && limitStr !== null) {
+      const limit = parseInt(limitStr, 10) || 100;
+      const remaining = parseInt(remainingStr, 10) || 0;
+      const current = Math.max(0, limit - remaining);
+      globalQuotaStatus = { current, limit };
+    }
+  } catch (e) {
+    console.error('Error updating quota from headers:', e);
+  }
+}
 
 /**
  * Fetch real-time quota status directly from API-Football /status endpoint
  */
-export async function fetchApiQuotaStatus(apiKey?: string): Promise<{ current: number; limit: number } | null> {
+export async function fetchApiQuotaStatus(apiKey?: string): Promise<{ current: number; limit: number }> {
   const keyToUse = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_KEY;
   const headers = {
     'x-apisports-key': keyToUse,
@@ -38,19 +48,21 @@ export async function fetchApiQuotaStatus(apiKey?: string): Promise<{ current: n
 
   try {
     const res = await fetch(`${API_SPORTS_BASE}/status`, { headers, cache: 'no-store' });
+    updateQuotaFromHeaders(res);
     if (res.ok) {
       const data = await res.json();
-      if (data.response?.requests) {
-        return {
-          current: data.response.requests.current || 0,
-          limit: data.response.requests.limit_day || 100
-        };
+      const reqObj = Array.isArray(data.response) ? data.response[0]?.requests : data.response?.requests;
+      if (reqObj) {
+        const current = typeof reqObj.current === 'number' ? reqObj.current : globalQuotaStatus.current;
+        const limit = reqObj.limit_day || reqObj.limit || 100;
+        globalQuotaStatus = { current, limit };
+        return globalQuotaStatus;
       }
     }
   } catch (err) {
     console.error('Error fetching API quota status:', err);
   }
-  return null;
+  return globalQuotaStatus;
 }
 
 /**
@@ -59,6 +71,7 @@ export async function fetchApiQuotaStatus(apiKey?: string): Promise<{ current: n
 async function fetchFixtureStatistics(fixtureId: number, headers: Record<string, string>): Promise<any[]> {
   try {
     const res = await fetch(`${API_SPORTS_BASE}/fixtures/statistics?fixture=${fixtureId}`, { headers, cache: 'no-store' });
+    updateQuotaFromHeaders(res);
     if (res.ok) {
       const data = await res.json();
       return data.response || [];
@@ -108,19 +121,10 @@ function parseTeamStats(statisticsArray: any[], events: MatchEvent[], teamIdStr:
 }
 
 /**
- * Fetch real standings for a specific league from API-Football (With 30m Cache)
+ * Fetch real standings for a specific league from API-Football
  */
 export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode = 'PL'): Promise<StandingItem[]> {
   const keyToUse = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_KEY;
-  const cacheKey = `${keyToUse}_${leagueCode}`;
-  const now = Date.now();
-
-  // Check In-Memory Cache first to save Quota
-  const cached = standingsCache.get(cacheKey);
-  if (cached && (now - cached.timestamp < STANDINGS_CACHE_TTL)) {
-    return cached.data;
-  }
-
   const leagueId = LEAGUE_MAP[leagueCode]?.id || 39;
 
   const headers = {
@@ -133,6 +137,7 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
     try {
       const url = `${API_SPORTS_BASE}/standings?league=${leagueId}&season=${season}`;
       const res = await fetch(url, { headers, cache: 'no-store' });
+      updateQuotaFromHeaders(res);
       if (res.ok) {
         const data = await res.json();
         const standingsArray = data.response?.[0]?.league?.standings?.[0];
@@ -166,8 +171,6 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
             };
           });
 
-          // Save to Cache
-          standingsCache.set(cacheKey, { data: result, timestamp: now });
           return result;
         }
       }
@@ -180,18 +183,10 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
 }
 
 /**
- * Fetch real-world live, recent & upcoming fixtures ONLY for specified European leagues (With 5m Cache)
+ * Fetch real-world live, recent & upcoming fixtures ONLY for specified European leagues
  */
 export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode): Promise<Match[]> {
   const keyToUse = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_KEY;
-  const cacheKey = `${keyToUse}_${leagueCode || 'ALL'}`;
-  const now = Date.now();
-
-  // Check In-Memory Cache first to save Quota
-  const cached = fixturesCache.get(cacheKey);
-  if (cached && (now - cached.timestamp < FIXTURES_CACHE_TTL)) {
-    return cached.data;
-  }
 
   const selectedLeagueId = leagueCode && (leagueCode as string) !== 'ALL' 
     ? LEAGUE_MAP[leagueCode as LeagueCode]?.id 
@@ -210,6 +205,7 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
   try {
     const liveUrl = `${API_SPORTS_BASE}/fixtures?live=all`;
     const liveRes = await fetch(liveUrl, { headers, cache: 'no-store' });
+    updateQuotaFromHeaders(liveRes);
     if (liveRes.ok) {
       const liveData = await liveRes.json();
       if (liveData.response && Array.isArray(liveData.response)) {
@@ -235,6 +231,9 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
             fetch(`${API_SPORTS_BASE}/fixtures?league=${lId}&season=${season}&last=6`, { headers, cache: 'no-store' }),
             fetch(`${API_SPORTS_BASE}/fixtures?league=${lId}&season=${season}&next=3`, { headers, cache: 'no-store' })
           ]);
+
+          if (lastRes.ok) updateQuotaFromHeaders(lastRes);
+          if (nextRes.ok) updateQuotaFromHeaders(nextRes);
 
           let leagueFixtures: any[] = [];
           if (lastRes.ok) {
@@ -298,66 +297,54 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
     const awayTeamId = item.teams?.away?.id?.toString() || 'away';
 
     const events: MatchEvent[] = (item.events || []).map((e: any, idx: number) => ({
-      id: `real-event-${idx}`,
+      id: `ev-${item.fixture?.id}-${idx}`,
       time: e.time?.elapsed || 0,
-      type: e.type === 'Goal' 
-        ? 'goal' 
-        : e.detail?.toLowerCase().includes('yellow') 
-          ? 'yellow_card' 
-          : e.detail?.toLowerCase().includes('red') 
-            ? 'red_card' 
-            : 'substitution',
       teamId: e.team?.id?.toString() || '',
       player: e.player?.name || 'Cầu thủ',
-      assistPlayer: e.assist?.name
+      type: e.type === 'Goal' ? 'goal' : e.detail?.includes('Yellow') ? 'yellow_card' : e.detail?.includes('Red') ? 'red_card' : 'sub'
     }));
 
-    const leagueCodeFound = (Object.keys(LEAGUE_MAP).find(
-      key => LEAGUE_MAP[key as LeagueCode].id === item.league?.id
-    ) as LeagueCode) || 'PL';
-
-    const realStatsArray = statsMap.get(item.fixture?.id) || item.statistics || [];
-
-    const stats = {
-      home: parseTeamStats(realStatsArray, events, homeTeamId, true),
-      away: parseTeamStats(realStatsArray, events, awayTeamId, false)
-    };
+    const fixtureStats = statsMap.get(item.fixture?.id);
+    const homeStats = parseTeamStats(fixtureStats || [], events, homeTeamId, true);
+    const awayStats = parseTeamStats(fixtureStats || [], events, awayTeamId, false);
 
     return {
-      id: item.fixture?.id?.toString() || Math.random().toString(),
-      leagueId: leagueCodeFound,
-      season: item.league?.season?.toString() || '2024/25',
-      round: item.league?.round || 'Regular Season',
-      date: item.fixture?.date || new Date().toISOString(),
-      status,
-      elapsedTime: item.fixture?.status?.elapsed || 0,
+      id: item.fixture?.id?.toString() || `f-${Math.random()}`,
+      leagueId: (Object.keys(LEAGUE_MAP).find(
+        key => LEAGUE_MAP[key as LeagueCode].id === item.league?.id
+      ) || 'PL') as LeagueCode,
       homeTeam: {
         id: homeTeamId,
-        name: item.teams?.home?.name || 'Home Team',
+        name: item.teams?.home?.name || 'Đội nhà',
         shortName: (item.teams?.home?.name || 'HOM').substring(0, 3).toUpperCase(),
         logo: item.teams?.home?.logo || '',
-        leagueId: leagueCodeFound,
-        stadium: item.fixture?.venue?.name || 'Home Stadium'
+        leagueId: 'PL',
+        stadium: item.fixture?.venue?.name || 'Stadium'
       },
       awayTeam: {
         id: awayTeamId,
-        name: item.teams?.away?.name || 'Away Team',
+        name: item.teams?.away?.name || 'Đội khách',
         shortName: (item.teams?.away?.name || 'AWY').substring(0, 3).toUpperCase(),
         logo: item.teams?.away?.logo || '',
-        leagueId: leagueCodeFound,
-        stadium: item.fixture?.venue?.name || 'Away Stadium'
+        leagueId: 'PL',
+        stadium: item.fixture?.venue?.name || 'Stadium'
       },
-      homeScore: item.goals?.home ?? (status === 'FINISHED' ? 0 : null),
-      awayScore: item.goals?.away ?? (status === 'FINISHED' ? 0 : null),
-      venue: item.fixture?.venue?.name || 'Sân vận động',
-      referee: item.fixture?.referee || 'Trọng tài điều hành',
-      events,
-      stats
+      homeScore: item.goals?.home ?? 0,
+      awayScore: item.goals?.away ?? 0,
+      status,
+      elapsedTime: item.fixture?.status?.elapsed || 0,
+      date: item.fixture?.date || new Date().toISOString(),
+      venue: item.fixture?.venue?.name || 'Sân vận động Quốc tế',
+      referee: item.fixture?.referee || 'Trọng tài FIFA',
+      round: item.league?.round || 'Vòng đấu',
+      season: item.league?.season?.toString() || '2024/25',
+      stats: {
+        home: homeStats,
+        away: awayStats
+      },
+      events
     };
   });
-
-  // Save to Cache
-  fixturesCache.set(cacheKey, { data: results, timestamp: now });
 
   return results;
 }
