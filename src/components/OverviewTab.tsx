@@ -3,7 +3,7 @@
 import React from 'react';
 import { Match, LeagueCode } from '@/types/football';
 import { calculateKPIMetrics } from '@/utils/analyticsCalculations';
-import { COMPETITIONS } from '@/data/mockData';
+import { COMPETITIONS } from '@/constants/competitions';
 import { TeamLogo } from '@/components/TeamLogo';
 import { 
   Trophy, Target, Flame, Shield, Flag, 
@@ -28,7 +28,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const kpi = calculateKPIMetrics(filteredMatches);
 
-  // Filter ALL live matches
+  // Filter ALL live matches from real match data
   const liveMatches = filteredMatches.filter(m => m.status === 'LIVE');
 
   // Prepare chart data comparing leagues
@@ -117,11 +117,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <div className="flex items-center gap-2.5">
             <Info className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
-              <strong>LIVE API Connected:</strong> Hiện không có trận đấu trực tiếp (LIVE) thuộc các giải đang chọn. Đang hiển thị danh sách các trận đấu thực tế mới nhất & sắp tới.
+              <strong>LIVE API Connected:</strong> Hiện không có trận đấu nào đang diễn ra trực tiếp (LIVE). Đang hiển thị các trận đấu thực tế mới nhất.
             </span>
           </div>
           <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded font-mono shrink-0">
-            Real Data Active
+            Real API Active
           </span>
         </div>
       )}
@@ -143,18 +143,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-xs font-medium">Tổng Trận Đấu</span>
               <Trophy className="w-4 h-4 text-blue-400" />
             </div>
-            <div className="text-2xl font-extrabold text-white">{kpi.totalMatches}</div>
-            <p className="text-[11px] text-slate-500 mt-1">Dữ liệu từ API-Football</p>
+            <div className="text-2xl font-black text-white font-mono">{kpi.totalMatches}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Dữ liệu từ Database</span>
           </div>
 
           {/* 2. Total Goals */}
           <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-medium">Tổng Bàn Thắng</span>
-              <Target className="w-4 h-4 text-emerald-400" />
+              <Flame className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-2xl font-extrabold text-emerald-400">{kpi.totalGoals}</div>
-            <p className="text-[11px] text-slate-500 mt-1">Bàn thắng hợp lệ</p>
+            <div className="text-2xl font-black text-emerald-400 font-mono">{kpi.totalGoals}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Bàn thắng hợp lệ</span>
           </div>
 
           {/* 3. Avg Goals/Match */}
@@ -163,8 +163,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-xs font-medium">Trung Bình Bàn/Trận</span>
               <Flame className="w-4 h-4 text-amber-400" />
             </div>
-            <div className="text-2xl font-extrabold text-amber-400">{kpi.avgGoalsPerMatch}</div>
-            <p className="text-[11px] text-slate-500 mt-1">Goals per game</p>
+            <div className="text-2xl font-black text-amber-400 font-mono">{kpi.avgGoalsPerMatch}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Goals per game</span>
           </div>
 
           {/* 4. Avg Corners */}
@@ -173,38 +173,38 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-xs font-medium">Trung Bình Phạt Góc</span>
               <Flag className="w-4 h-4 text-cyan-400" />
             </div>
-            <div className="text-2xl font-extrabold text-cyan-400">{kpi.avgCorners}</div>
-            <p className="text-[11px] text-slate-500 mt-1">Corners per game</p>
+            <div className="text-2xl font-black text-cyan-400 font-mono">{kpi.avgCorners}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Corners per game</span>
           </div>
 
           {/* 5. Avg Yellow Cards */}
           <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-medium">Trung Bình Thẻ Vàng</span>
-              <div className="w-3.5 h-4 bg-amber-400 rounded-sm"></div>
+              <div className="w-3 h-4 bg-amber-400 rounded-sm"></div>
             </div>
-            <div className="text-2xl font-extrabold text-amber-300">{kpi.avgYellowCards}</div>
-            <p className="text-[11px] text-slate-500 mt-1">Yellow cards / game</p>
+            <div className="text-2xl font-black text-amber-300 font-mono">{kpi.avgYellowCards}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Yellow cards / game</span>
           </div>
 
           {/* 6. Avg Red Cards */}
           <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-medium">Trung Bình Thẻ Đỏ</span>
-              <div className="w-3.5 h-4 bg-red-500 rounded-sm"></div>
+              <div className="w-3 h-4 bg-red-500 rounded-sm"></div>
             </div>
-            <div className="text-2xl font-extrabold text-red-400">{kpi.avgRedCards}</div>
-            <p className="text-[11px] text-slate-500 mt-1">Red cards / game</p>
+            <div className="text-2xl font-black text-red-400 font-mono">{kpi.avgRedCards}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Red cards / game</span>
           </div>
 
           {/* 7. BTTS Rate */}
           <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-medium">Tỷ Lệ BTTS (Cùng Ghi Bàn)</span>
-              <Percent className="w-4 h-4 text-indigo-400" />
+              <Percent className="w-4 h-4 text-purple-400" />
             </div>
-            <div className="text-2xl font-extrabold text-indigo-400">{kpi.bttsRate}%</div>
-            <p className="text-[11px] text-slate-500 mt-1">Both Teams To Score</p>
+            <div className="text-2xl font-black text-purple-400 font-mono">{kpi.bttsRate}%</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Both Teams To Score</span>
           </div>
 
           {/* 8. Clean Sheet Rate */}
@@ -213,18 +213,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-xs font-medium">Tỷ Lệ Giữ Sạch Lưới</span>
               <Shield className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-2xl font-extrabold text-emerald-400">{kpi.cleanSheetRate}%</div>
-            <p className="text-[11px] text-slate-500 mt-1">Clean Sheet Rate</p>
+            <div className="text-2xl font-black text-emerald-300 font-mono">{kpi.cleanSheetRate}%</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Clean Sheet Rate</span>
           </div>
 
-          {/* 9. Over 2.5 Rate */}
+          {/* 9. Over 2.5 Goals Rate */}
           <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium">Tỷ Lệ Nổ Tài {'>'} 2.5</span>
+              <span className="text-xs font-medium">Tỷ Lệ Nổ Tài &gt; 2.5</span>
               <TrendingUp className="w-4 h-4 text-teal-400" />
             </div>
-            <div className="text-2xl font-extrabold text-teal-400">{kpi.over25Rate}%</div>
-            <p className="text-[11px] text-slate-500 mt-1">Over 2.5 Goals %</p>
+            <div className="text-2xl font-black text-teal-300 font-mono">{kpi.over25Rate}%</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Over 2.5 Goals %</span>
           </div>
 
           {/* 10. Home Win Rate */}
@@ -233,18 +233,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-xs font-medium">Chủ Nhà Thắng %</span>
               <Home className="w-4 h-4 text-blue-400" />
             </div>
-            <div className="text-2xl font-extrabold text-blue-400">{kpi.homeWinRate}%</div>
-            <p className="text-[11px] text-slate-500 mt-1">Home Win Rate</p>
+            <div className="text-2xl font-black text-blue-400 font-mono">{kpi.homeWinRate}%</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Home Win Rate</span>
           </div>
 
           {/* 11. Draw Rate */}
           <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-medium">Tỷ Lệ Hòa %</span>
-              <Scale className="w-4 h-4 text-purple-400" />
+              <Scale className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="text-2xl font-extrabold text-purple-400">{kpi.drawRate}%</div>
-            <p className="text-[11px] text-slate-500 mt-1">Draw Rate</p>
+            <div className="text-2xl font-black text-slate-300 font-mono">{kpi.drawRate}%</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Draw Rate</span>
           </div>
 
           {/* 12. Away Win Rate */}
@@ -253,50 +253,53 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-xs font-medium">Khách Thắng %</span>
               <PlaneLanding className="w-4 h-4 text-orange-400" />
             </div>
-            <div className="text-2xl font-extrabold text-orange-400">{kpi.awayWinRate}%</div>
-            <p className="text-[11px] text-slate-500 mt-1">Away Win Rate</p>
+            <div className="text-2xl font-black text-orange-400 font-mono">{kpi.awayWinRate}%</div>
+            <span className="text-[10px] text-slate-500 block mt-1">Away Win Rate</span>
           </div>
         </div>
       </div>
 
-      {/* Comparison Charts Across 6 Leagues */}
+      {/* Analytics Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Goals & Over 2.5 Chart */}
-        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
+        {/* Chart 1: Avg Goals & Over 2.5 per League */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
             <Flame className="w-4 h-4 text-amber-400" />
-            <span>So Sánh Bàn Thắng & Tỷ Lệ Tài 2.5 Giữa Các Giải</span>
+            <span>So Sánh Bàn Thắng &amp; Tỷ Lệ Tài 2.5 Giữa Các Giải</span>
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leagueComparisonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} />
-                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+              <BarChart data={leagueComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 11 }} />
+                <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                />
                 <Bar dataKey="avgGoals" name="Trung bình bàn/trận" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* BTTS & Corners Chart */}
-        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
+        {/* Chart 2: BTTS % & Corners per League */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <Percent className="w-4 h-4 text-indigo-400" />
-            <span>So Sánh Tỷ Lệ BTTS (%) & Số Góc Trung Bình</span>
+            <Percent className="w-4 h-4 text-purple-400" />
+            <span>So Sánh Tỷ Lệ BTTS (%) &amp; Số Góc Trung Bình</span>
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leagueComparisonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} />
-                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                <Bar dataKey="bttsRate" name="Tỷ lệ BTTS (%)" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <BarChart data={leagueComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 11 }} />
+                <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                 <Bar dataKey="avgCorners" name="Phạt góc trung bình" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="bttsRate" name="Tỷ lệ BTTS (%)" fill="#a855f7" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
