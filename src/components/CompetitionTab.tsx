@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { COMPETITIONS, STANDINGS_DATA } from '@/data/mockData';
+import { COMPETITIONS } from '@/constants/competitions';
 import { LeagueCode, StandingItem } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { useFootball } from '@/context/FootballContext';
-import { Trophy, Calendar, Sparkles } from 'lucide-react';
+import { Trophy, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 
 interface CompetitionTabProps {
   selectedLeague: LeagueCode | 'ALL';
@@ -24,7 +24,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
     selectedLeague === 'ALL' ? 'PL' : selectedLeague
   );
 
-  const [standings, setStandings] = useState<StandingItem[]>(STANDINGS_DATA[activeLeague] || []);
+  const [standings, setStandings] = useState<StandingItem[]>([]);
   const [isLoadingStandings, setIsLoadingStandings] = useState<boolean>(false);
   const [isRealStandings, setIsRealStandings] = useState<boolean>(false);
 
@@ -32,14 +32,14 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
   useEffect(() => {
     async function loadStandings() {
       if (!isRealDataMode || !apiKey) {
-        setStandings(STANDINGS_DATA[activeLeague] || []);
+        setStandings([]);
         setIsRealStandings(false);
         return;
       }
 
       // Check localStorage persistent cache first
-      const cacheKey = `fb_standings_${activeLeague}`;
-      const cacheTimeKey = `fb_standings_time_${activeLeague}`;
+      const cacheKey = `fb_standings_v2_${activeLeague}`;
+      const cacheTimeKey = `fb_standings_time_v2_${activeLeague}`;
 
       try {
         const cachedData = localStorage.getItem(cacheKey);
@@ -48,11 +48,11 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
 
         if (cachedData && cachedTime && (now - parseInt(cachedTime) < STANDINGS_CACHE_TTL)) {
           const parsed: StandingItem[] = JSON.parse(cachedData);
-          if (parsed && parsed.length > 0) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setStandings(parsed);
             setIsRealStandings(true);
             setIsLoadingStandings(false);
-            return; // Loaded from localStorage! 0 API requests used.
+            return;
           }
         }
       } catch (e) {
@@ -63,7 +63,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
       try {
         const res = await fetch(`/api/football/standings?league=${activeLeague}&apiKey=${encodeURIComponent(apiKey)}`);
         const result = await res.json();
-        if (result.success && result.data && result.data.length > 0) {
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           setStandings(result.data);
           setIsRealStandings(true);
 
@@ -75,12 +75,12 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
             console.error('Error saving standings to localStorage:', e);
           }
         } else {
-          setStandings(STANDINGS_DATA[activeLeague] || []);
+          setStandings([]);
           setIsRealStandings(false);
         }
       } catch (err) {
         console.error('Error loading standings API:', err);
-        setStandings(STANDINGS_DATA[activeLeague] || []);
+        setStandings([]);
         setIsRealStandings(false);
       } finally {
         setIsLoadingStandings(false);
@@ -142,8 +142,8 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
 
           <div className="bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-center">
             <span className="text-slate-500 block">Nguồn Dữ Liệu</span>
-            <strong className={`text-xs font-mono font-bold ${isRealStandings ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {isRealStandings ? '🟢 Real API-Football' : '🟡 Mock Snapshot'}
+            <strong className={`text-xs font-mono font-bold ${isRealStandings ? 'text-emerald-400' : 'text-slate-400'}`}>
+              {isRealStandings ? '🟢 Real API-Football' : '⚪ Real Data Pending'}
             </strong>
           </div>
         </div>
@@ -158,88 +158,96 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
               <span>Bảng Xếp Hạng Chi Tiết ({competition.name})</span>
             </h3>
             {isLoadingStandings ? (
-              <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Đang tải BXH...</span>
+              <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Đang tải BXH thực tế...</span>
             ) : isRealStandings ? (
               <span className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
                 <Sparkles className="w-3 h-3" /> Live Standings API
               </span>
             ) : (
-              <span className="text-[11px] text-slate-400 font-mono">Demo Snapshot</span>
+              <span className="text-[11px] text-slate-400 font-mono">No Data Available</span>
             )}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-3 text-center">Hạng</th>
-                  <th className="py-3 px-4">Đội bóng</th>
-                  <th className="py-3 px-2 text-center">ST</th>
-                  <th className="py-3 px-2 text-center">T</th>
-                  <th className="py-3 px-2 text-center">H</th>
-                  <th className="py-3 px-2 text-center">B</th>
-                  <th className="py-3 px-2 text-center">BT</th>
-                  <th className="py-3 px-2 text-center">BB</th>
-                  <th className="py-3 px-2 text-center">HS</th>
-                  <th className="py-3 px-3 text-center text-emerald-400 font-bold">Điểm</th>
-                  <th className="py-3 px-4 text-center">Phong độ (5 trận)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {standings.map((item) => (
-                  <tr key={item.team.id || item.rank} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-3 text-center font-bold">
-                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
-                        item.rank === 1
-                          ? 'bg-amber-400/20 text-amber-300 font-bold border border-amber-400/40'
-                          : item.rank <= 4
-                          ? 'bg-blue-500/20 text-blue-300 font-semibold'
-                          : item.rank >= (standings.length - 3)
-                          ? 'bg-red-500/20 text-red-300 font-semibold'
-                          : 'text-slate-400'
-                      }`}>
-                        {item.rank}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
-                      <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5" />
-                      <span>{item.team.name}</span>
-                    </td>
-                    <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.played}</td>
-                    <td className="py-3 px-2 text-center text-emerald-400 font-mono font-semibold">{item.won}</td>
-                    <td className="py-3 px-2 text-center text-slate-400 font-mono">{item.drawn}</td>
-                    <td className="py-3 px-2 text-center text-red-400 font-mono">{item.lost}</td>
-                    <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.goalsFor}</td>
-                    <td className="py-3 px-2 text-center text-slate-400 font-mono">{item.goalsAgainst}</td>
-                    <td className="py-3 px-2 text-center font-mono font-semibold text-slate-200">
-                      {item.goalDifference > 0 ? `+${item.goalDifference}` : item.goalDifference}
-                    </td>
-                    <td className="py-3 px-3 text-center text-emerald-400 font-black text-sm font-mono">
-                      {item.points}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-center gap-1">
-                        {item.form.map((res, i) => (
-                          <span
-                            key={i}
-                            className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
-                              res === 'W'
-                                ? 'bg-emerald-500 text-slate-950'
-                                : res === 'D'
-                                ? 'bg-slate-600 text-white'
-                                : 'bg-red-500 text-white'
-                            }`}
-                          >
-                            {res}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
+          {standings.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 space-y-3">
+              <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
+              <p className="text-sm font-medium">Chưa có dữ liệu bảng xếp hạng cho giải đấu này.</p>
+              <p className="text-xs text-slate-500">Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau ít phút.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="py-3 px-3 text-center">Hạng</th>
+                    <th className="py-3 px-4">Đội bóng</th>
+                    <th className="py-3 px-2 text-center">ST</th>
+                    <th className="py-3 px-2 text-center">T</th>
+                    <th className="py-3 px-2 text-center">H</th>
+                    <th className="py-3 px-2 text-center">B</th>
+                    <th className="py-3 px-2 text-center">BT</th>
+                    <th className="py-3 px-2 text-center">BB</th>
+                    <th className="py-3 px-2 text-center">HS</th>
+                    <th className="py-3 px-3 text-center text-emerald-400 font-bold">Điểm</th>
+                    <th className="py-3 px-4 text-center">Phong độ (5 trận)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {standings.map((item) => (
+                    <tr key={item.team.id || item.rank} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-3 text-center font-bold">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
+                          item.rank === 1
+                            ? 'bg-amber-400/20 text-amber-300 font-bold border border-amber-400/40'
+                            : item.rank <= 4
+                            ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                            : item.rank >= (standings.length - 3)
+                            ? 'bg-red-500/20 text-red-300 font-semibold'
+                            : 'text-slate-400'
+                        }`}>
+                          {item.rank}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
+                        <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5" />
+                        <span>{item.team.name}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.played}</td>
+                      <td className="py-3 px-2 text-center text-emerald-400 font-mono font-semibold">{item.won}</td>
+                      <td className="py-3 px-2 text-center text-slate-400 font-mono">{item.drawn}</td>
+                      <td className="py-3 px-2 text-center text-red-400 font-mono">{item.lost}</td>
+                      <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.goalsFor}</td>
+                      <td className="py-3 px-2 text-center text-slate-400 font-mono">{item.goalsAgainst}</td>
+                      <td className="py-3 px-2 text-center font-mono font-semibold text-slate-200">
+                        {item.goalDifference > 0 ? `+${item.goalDifference}` : item.goalDifference}
+                      </td>
+                      <td className="py-3 px-3 text-center text-emerald-400 font-black text-sm font-mono">
+                        {item.points}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-1">
+                          {item.form.map((res, i) => (
+                            <span
+                              key={i}
+                              className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
+                                res === 'W'
+                                  ? 'bg-emerald-500 text-slate-950'
+                                  : res === 'D'
+                                  ? 'bg-slate-600 text-white'
+                                  : 'bg-red-500 text-white'
+                              }`}
+                            >
+                              {res}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Fixtures & Results List (1 col) */}
@@ -253,7 +261,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
             <div className="space-y-3">
               {leagueMatches.length === 0 ? (
                 <p className="text-xs text-slate-500 italic py-6 text-center">
-                  Đang cập nhật lịch thi đấu từ API-Football...
+                  Hiện chưa có danh sách trận đấu thực tế cho giải này...
                 </p>
               ) : (
                 leagueMatches.map(m => (
