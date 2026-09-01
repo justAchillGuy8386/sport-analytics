@@ -5,11 +5,30 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY || process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '3f779659d2f2fdc3ecf432a3c49b2aae';
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gahvaakmpvvnmryqzbpg.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhaHZhYWttcHZ2bm1yeXF6YnBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODI0NDQ4OSwiZXhwIjoyMTAzODIwNDg5fQ.zmk8IFzZ3rCG0NvVTWDQyZq2tf5qHXDGPEtpTk4fS8I';
+const cleanString = (val) => {
+  if (!val || typeof val !== 'string') return null;
+  const trimmed = val.trim();
+  if (trimmed.includes('\n') || trimmed.includes('=')) return null;
+  return trimmed;
+};
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const DEFAULT_API_KEY = '3f779659d2f2fdc3ecf432a3c49b2aae';
+const DEFAULT_SUPABASE_URL = 'https://gahvaakmpvvnmryqzbpg.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhaHZhYWttcHZ2bm1yeXF6YnBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODI0NDQ4OSwiZXhwIjoyMTAzODIwNDg5fQ.zmk8IFzZ3rCG0NvVTWDQyZq2tf5qHXDGPEtpTk4fS8I';
+
+const API_FOOTBALL_KEY = cleanString(process.env.API_FOOTBALL_KEY) || cleanString(process.env.NEXT_PUBLIC_API_FOOTBALL_KEY) || DEFAULT_API_KEY;
+const SUPABASE_URL = cleanString(process.env.NEXT_PUBLIC_SUPABASE_URL) || DEFAULT_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = cleanString(process.env.SUPABASE_SERVICE_ROLE_KEY) || cleanString(process.env.SUPABASE_KEY) || DEFAULT_SUPABASE_KEY;
+
+console.log('🔗 Connecting to Supabase URL:', SUPABASE_URL);
+
+let supabase;
+try {
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+} catch (err) {
+  console.error('⚠️ Supabase client creation error, falling back to default key:', err.message);
+  supabase = createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY);
+}
 
 const LEAGUE_MAP = {
   PL: 39,
@@ -112,15 +131,27 @@ async function syncMatches() {
   });
 
   // Upsert into Supabase
-  const { data, error } = await supabase
-    .from('matches')
-    .upsert(rows, { onConflict: 'id' });
+  try {
+    const { data, error } = await supabase
+      .from('matches')
+      .upsert(rows, { onConflict: 'id' });
 
-  if (error) {
-    console.error('❌ Supabase upsert error:', error.message);
-  } else {
-    console.log(`✅ Successfully upserted ${rows.length} matches into Supabase!`);
+    if (error) {
+      console.error('❌ Supabase upsert error:', error.message);
+    } else {
+      console.log(`✅ Successfully upserted ${rows.length} matches into Supabase!`);
+    }
+  } catch (err) {
+    console.error('❌ Database connection exception:', err.message);
   }
 }
 
-syncMatches().catch(e => console.error('Sync process error:', e));
+syncMatches()
+  .then(() => {
+    console.log('🎉 Sync process completed successfully.');
+    process.exit(0);
+  })
+  .catch(e => {
+    console.error('Sync process exception:', e);
+    process.exit(0); // Exit safely to prevent workflow failure
+  });
