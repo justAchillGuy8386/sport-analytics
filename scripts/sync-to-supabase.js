@@ -1,6 +1,7 @@
 /**
  * Automated Sync Script: API-Football -> Supabase Database
  * Optimized for 100 req/day API Quota Limit
+ * Pure Dynamic Date & Time Fetching
  */
 
 const { createClient } = require('@supabase/supabase-js');
@@ -45,8 +46,35 @@ const LEAGUE_MAP = {
   UCL: 2
 };
 
+// Helper: Format Date object to YYYY-MM-DD
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function syncMatches() {
-  console.log('🚀 Starting API-Football to Supabase Sync Job...');
+  const now = new Date();
+  const todayStr = formatDate(now);
+  console.log(`🚀 Starting Dynamic API-Football Sync Job at ${now.toISOString()} (Today: ${todayStr})...`);
+
+  // Dynamically calculate date range: 3 days ago to 3 days in the future
+  const past3Days = new Date(now);
+  past3Days.setDate(now.getDate() - 3);
+
+  const future3Days = new Date(now);
+  future3Days.setDate(now.getDate() + 3);
+
+  const fromStr = formatDate(past3Days);
+  const toStr = formatDate(future3Days);
+
+  // Dynamically calculate European football season year based on execution date
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const dynamicSeason = currentMonth >= 8 ? currentYear : currentYear - 1;
+
+  console.log(`📅 Dynamic Window: ${fromStr} -> ${toStr} (Dynamic Season: ${dynamicSeason})`);
 
   const headers = {
     'x-apisports-key': API_FOOTBALL_KEY,
@@ -54,50 +82,57 @@ async function syncMatches() {
   };
 
   let allFixtures = [];
+  const targetLeagueIds = Object.values(LEAGUE_MAP);
 
-  // 1. Fetch LIVE matches
+  // 1. Fetch Today's Matches worldwide using date parameter (Standalone parameter supported by API-Football!)
   try {
-    const liveRes = await fetch('https://v3.football.api-sports.io/fixtures?live=all', { headers });
-    if (liveRes.ok) {
-      const liveData = await liveRes.json();
-      if (liveData.response && Array.isArray(liveData.response)) {
-        console.log(`⚽ Found ${liveData.response.length} live matches.`);
-        const targetIds = Object.values(LEAGUE_MAP);
-        const filteredLive = liveData.response.filter(item => targetIds.includes(item.league?.id));
-        allFixtures.push(...filteredLive);
+    const todayUrl = `https://v3.football.api-sports.io/fixtures?date=${todayStr}`;
+    const todayRes = await fetch(todayUrl, { headers });
+    if (todayRes.ok) {
+      const todayData = await todayRes.json();
+      if (todayData.response && Array.isArray(todayData.response)) {
+        const filteredToday = todayData.response.filter(item => targetLeagueIds.includes(item.league?.id));
+        console.log(`⚽ Found ${filteredToday.length} target league matches occurring today (${todayStr}).`);
+        allFixtures.push(...filteredToday);
       }
     }
   } catch (err) {
-    console.error('Error fetching live matches:', err.message);
+    console.error('Error fetching today fixtures:', err.message);
   }
 
-  // 2. Fetch Recent Past & Upcoming Fixtures for Top Leagues (Premier League, La Liga, Serie A)
-  const targetLeagues = [39, 140, 135]; // PL, LL, SA
-  for (const lId of targetLeagues) {
-    // Fetch upcoming fixtures
+  // 2. Fetch matches for main leagues using league + season + date range (from -> to)
+  const topLeagues = [39, 140, 135]; // PL, LL, SA
+  for (const lId of topLeagues) {
     try {
-      const nextRes = await fetch(`https://v3.football.api-sports.io/fixtures?league=${lId}&next=5`, { headers });
-      if (nextRes.ok) {
-        const nextData = await nextRes.json();
-        if (nextData.response && Array.isArray(nextData.response)) {
-          allFixtures.push(...nextData.response);
+      const leagueUrl = `https://v3.football.api-sports.io/fixtures?league=${lId}&season=${dynamicSeason}&from=${fromStr}&to=${toStr}`;
+      const res = await fetch(leagueUrl, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.response && Array.isArray(data.response) && data.response.length > 0) {
+          console.log(`🏆 Found ${data.response.length} matches for league ${lId} in range ${fromStr} to ${toStr}.`);
+          allFixtures.push(...data.response);
         }
       }
     } catch (e) {
-      console.error(`Error fetching upcoming fixtures for league ${lId}:`, e.message);
+      console.error(`Error fetching league ${lId} range:`, e.message);
     }
+  }
 
-    // Fetch past fixtures
-    try {
-      const lastRes = await fetch(`https://v3.football.api-sports.io/fixtures?league=${lId}&last=5`, { headers });
-      if (lastRes.ok) {
-        const lastData = await lastRes.json();
-        if (lastData.response && Array.isArray(lastData.response)) {
-          allFixtures.push(...lastData.response);
+  // 3. Fallback: If still few matches, fetch last 5 for top leagues
+  if (allFixtures.length < 5) {
+    for (const lId of topLeagues) {
+      try {
+        const fallbackUrl = `https://v3.football.api-sports.io/fixtures?league=${lId}&season=${dynamicSeason}&last=5`;
+        const res = await fetch(fallbackUrl, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.response && Array.isArray(data.response)) {
+            allFixtures.push(...data.response);
+          }
         }
+      } catch (e) {
+        console.error(`Fallback error for league ${lId}:`, e.message);
       }
-    } catch (e) {
-      console.error(`Error fetching past fixtures for league ${lId}:`, e.message);
     }
   }
 
@@ -114,7 +149,7 @@ async function syncMatches() {
     }
   }
   const uniqueFixtures = Array.from(uniqueMap.values());
-  console.log(`📦 Deduplicated ${uniqueFixtures.length} total matches to insert into Supabase.`);
+  console.log(`📦 Deduplicated ${uniqueFixtures.length} total dynamic matches to insert into Supabase.`);
 
   // Map to Supabase table schema
   const rows = uniqueFixtures.map(item => {
@@ -128,7 +163,7 @@ async function syncMatches() {
     return {
       id: item.fixture?.id?.toString(),
       league_id: leagueCode,
-      season: item.league?.season?.toString() || '2024/25',
+      season: item.league?.season?.toString() || `${dynamicSeason}/${(dynamicSeason + 1).toString().slice(-2)}`,
       round: item.league?.round || 'Regular Season',
       status: status,
       date: item.fixture?.date || new Date().toISOString(),
@@ -156,7 +191,7 @@ async function syncMatches() {
     if (error) {
       console.error('❌ Supabase upsert error:', error.message);
     } else {
-      console.log(`✅ Successfully upserted ${rows.length} matches into Supabase Database!`);
+      console.log(`✅ Successfully upserted ${rows.length} dynamic matches into Supabase Database!`);
     }
   } catch (err) {
     console.error('❌ Database connection exception:', err.message);
@@ -165,10 +200,10 @@ async function syncMatches() {
 
 syncMatches()
   .then(() => {
-    console.log('🎉 Sync process completed successfully.');
+    console.log('🎉 Dynamic sync process completed successfully.');
     process.exit(0);
   })
   .catch(e => {
-    console.error('Sync process exception:', e);
+    console.error('Dynamic sync process exception:', e);
     process.exit(0);
   });
