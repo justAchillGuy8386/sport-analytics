@@ -1,7 +1,7 @@
 import { Match, StandingItem, LeagueCode, MatchEvent, TeamStatistics } from '@/types/football';
 
 const API_SPORTS_BASE = 'https://v3.football.api-sports.io';
-const DEFAULT_KEY = '3f779659d2f2fdc3ecf432a3c49b2aae';
+const getApiKey = () => process.env.API_FOOTBALL_KEY || process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '';
 
 export const LEAGUE_MAP: Record<LeagueCode, { id: number; name: string }> = {
   PL: { id: 39, name: 'Premier League' },
@@ -40,7 +40,9 @@ export function updateQuotaFromHeaders(res: Response) {
  * Fetch real-time quota status directly from API-Football /status endpoint
  */
 export async function fetchApiQuotaStatus(apiKey?: string): Promise<{ current: number; limit: number }> {
-  const keyToUse = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_KEY;
+  const keyToUse = (apiKey && apiKey.trim()) || getApiKey();
+  if (!keyToUse) return globalQuotaStatus;
+
   const headers = {
     'x-apisports-key': keyToUse,
     'x-rapidapi-key': keyToUse
@@ -124,7 +126,9 @@ function parseTeamStats(statisticsArray: any[], events: MatchEvent[], teamIdStr:
  * Fetch real standings for a specific league from API-Football
  */
 export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode = 'PL'): Promise<StandingItem[]> {
-  const keyToUse = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_KEY;
+  const keyToUse = (apiKey && apiKey.trim()) || getApiKey();
+  if (!keyToUse) return [];
+
   const leagueId = LEAGUE_MAP[leagueCode]?.id || 39;
 
   const headers = {
@@ -186,7 +190,8 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
  * Fetch real-world live, recent & upcoming fixtures ONLY for specified European leagues
  */
 export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode): Promise<Match[]> {
-  const keyToUse = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_KEY;
+  const keyToUse = (apiKey && apiKey.trim()) || getApiKey();
+  if (!keyToUse) return [];
 
   const selectedLeagueId = leagueCode && (leagueCode as string) !== 'ALL' 
     ? LEAGUE_MAP[leagueCode as LeagueCode]?.id 

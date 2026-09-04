@@ -1,9 +1,3 @@
-/**
- * Automated Sync Script: API-Football -> Supabase Database
- * Optimized for 100 req/day API Quota Limit
- * Pure Dynamic Date & Time Fetching
- */
-
 const { createClient } = require('@supabase/supabase-js');
 
 const cleanString = (val) => {
@@ -13,13 +7,18 @@ const cleanString = (val) => {
   return trimmed;
 };
 
-const DEFAULT_API_KEY = '3f779659d2f2fdc3ecf432a3c49b2aae';
-const DEFAULT_SUPABASE_URL = 'https://gahvaakmpvvnmryqzbpg.supabase.co';
-const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhaHZhYWttcHZ2bm1yeXF6YnBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODI0NDQ4OSwiZXhwIjoyMTAzODIwNDg5fQ.zmk8IFzZ3rCG0NvVTWDQyZq2tf5qHXDGPEtpTk4fS8I';
+const API_FOOTBALL_KEY = cleanString(process.env.API_FOOTBALL_KEY) || cleanString(process.env.NEXT_PUBLIC_API_FOOTBALL_KEY);
+const SUPABASE_URL = cleanString(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const SUPABASE_SERVICE_ROLE_KEY = cleanString(process.env.SUPABASE_SERVICE_ROLE_KEY) || cleanString(process.env.SUPABASE_KEY);
 
-const API_FOOTBALL_KEY = cleanString(process.env.API_FOOTBALL_KEY) || cleanString(process.env.NEXT_PUBLIC_API_FOOTBALL_KEY) || DEFAULT_API_KEY;
-const SUPABASE_URL = cleanString(process.env.NEXT_PUBLIC_SUPABASE_URL) || DEFAULT_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = cleanString(process.env.SUPABASE_SERVICE_ROLE_KEY) || cleanString(process.env.SUPABASE_KEY) || DEFAULT_SUPABASE_KEY;
+if (!API_FOOTBALL_KEY) {
+  console.error('❌ Missing API_FOOTBALL_KEY environment variable.');
+}
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.');
+  process.exit(1);
+}
 
 console.log('🔗 Connecting to Supabase URL:', SUPABASE_URL);
 
@@ -33,8 +32,8 @@ let supabase;
 try {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, clientOptions);
 } catch (err) {
-  console.error('⚠️ Supabase client creation error, falling back to default key:', err.message);
-  supabase = createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY, clientOptions);
+  console.error('⚠️ Supabase client creation error:', err.message);
+  process.exit(1);
 }
 
 const LEAGUE_MAP = {
@@ -84,7 +83,7 @@ async function syncMatches() {
   let allFixtures = [];
   const targetLeagueIds = Object.values(LEAGUE_MAP);
 
-  // 1. Fetch Today's Matches worldwide using date parameter (Standalone parameter supported by API-Football!)
+  // 1. Fetch Today's Matches worldwide using date parameter
   try {
     const todayUrl = `https://v3.football.api-sports.io/fixtures?date=${todayStr}`;
     const todayRes = await fetch(todayUrl, { headers });
