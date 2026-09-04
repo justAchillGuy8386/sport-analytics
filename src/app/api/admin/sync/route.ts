@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import { fetchRealFixtures } from '@/services/apiFootball';
 import { upsertMatchesToSupabase } from '@/services/supabaseService';
 
-const DEFAULT_KEY = '3f779659d2f2fdc3ecf432a3c49b2aae';
-
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const apiKey = body.apiKey || process.env.API_FOOTBALL_KEY || process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || DEFAULT_KEY;
+    const apiKey = body.apiKey || process.env.API_FOOTBALL_KEY || process.env.NEXT_PUBLIC_API_FOOTBALL_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json({
+        success: false,
+        message: 'Vui lòng cung cấp API Key để thực hiện đồng bộ.'
+      }, { status: 400 });
+    }
 
     console.log('🚀 Triggering manual sync from API-Football to Supabase DB...');
     

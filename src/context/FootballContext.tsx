@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Match, LeagueCode } from '@/types/football';
 
-const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '3f779659d2f2fdc3ecf432a3c49b2aae';
+const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '';
 
 interface FootballContextType {
   matches: Match[];
@@ -50,7 +50,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Fetch real-time quota status from API-Football /status
   const refreshQuota = useCallback(async () => {
-    if (!isRealDataMode || !apiKey) return;
+    if (!isRealDataMode) return;
     try {
       const res = await fetch(`/api/football/quota?apiKey=${encodeURIComponent(apiKey)}`);
       const result = await res.json();
@@ -69,7 +69,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load fresh data directly from Database & Live Stream (No temporary cache)
   useEffect(() => {
     async function loadData() {
-      if (!isRealDataMode || !apiKey) {
+      if (!isRealDataMode) {
         setMatches([]);
         setSelectedMatchId('');
         setIsLoadingApi(false);
