@@ -42,27 +42,32 @@ export const Sidebar: React.FC = () => {
     { href: '/etl', label: 'ETL & Quota Monitor', icon: Database },
   ];
 
+  // Get current active tab label for header
+  const activeNavItem = navItems.find(item => item.href === pathname) || navItems[0];
+
   return (
     <>
-      {/* Mobile Top Bar */}
-      <div className="lg:hidden bg-slate-950/95 backdrop-blur-md border-b border-slate-800/90 p-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-cyan-400 p-[2px]">
-            <div className="w-full h-full bg-slate-950 rounded-[6px] flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
-            </div>
-          </div>
-          <span className="font-extrabold text-white text-base tracking-wide">
-            FOOTBALL<span className="text-emerald-400">ANALYTICS</span>
+      {/* Mobile Top Header (Clean, Floating Top-Left Menu Trigger) */}
+      <div className="lg:hidden bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            aria-label="Toggle menu"
+            className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <span className="text-xs font-bold font-mono">MENU</span>
+          </button>
+
+          <span className="font-bold text-white text-xs sm:text-sm truncate">
+            {activeNavItem.label}
           </span>
         </div>
-        <button
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          aria-label="Toggle menu"
-          className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-300 hover:text-white active:scale-95 transition-all"
-        >
-          {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="text-[10px] text-slate-400 font-mono">LIVE API</span>
+        </div>
       </div>
 
       {/* Sidebar Overlay for Mobile */}

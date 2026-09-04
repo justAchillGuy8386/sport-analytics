@@ -96,12 +96,12 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
   return (
     <div className="space-y-6">
       {/* League Selection Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 border-b border-slate-800">
         {COMPETITIONS.map(comp => (
           <button
             key={comp.id}
             onClick={() => setActiveLeague(comp.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
               activeLeague === comp.id
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/10 font-bold'
                 : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
@@ -114,36 +114,36 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
       </div>
 
       {/* Header Info */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="text-4xl p-3 bg-slate-950 rounded-2xl border border-slate-800">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="text-3xl sm:text-4xl p-2.5 sm:p-3 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
             {competition.flag}
           </div>
           <div>
-            <h2 className="text-xl font-black text-white flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
               <span>{competition.name}</span>
-              <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+              <span className="text-[10px] sm:text-xs bg-emerald-500/10 text-emerald-400 px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                 {competition.season}
               </span>
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
               Quốc gia: <strong>{competition.country}</strong> • Quy mô: <strong>{standings.length || competition.totalTeams} Đội bóng</strong>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs">
-          <div className="bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-center">
-            <span className="text-slate-500 block">Số Trận Đã Đấu</span>
-            <strong className="text-white font-mono text-sm">
+        <div className="flex items-center gap-3 text-xs w-full sm:w-auto">
+          <div className="flex-1 sm:flex-initial bg-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-center">
+            <span className="text-slate-500 block text-[10px] sm:text-xs">Đã Đấu</span>
+            <strong className="text-white font-mono text-xs sm:text-sm">
               {leagueMatches.filter(m => m.status === 'FINISHED').length} Trận
             </strong>
           </div>
 
-          <div className="bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-center">
-            <span className="text-slate-500 block">Nguồn Dữ Liệu</span>
-            <strong className={`text-xs font-mono font-bold ${isRealStandings ? 'text-emerald-400' : 'text-slate-400'}`}>
-              {isRealStandings ? '🟢 Real API-Football' : '⚪ Real Data Pending'}
+          <div className="flex-1 sm:flex-initial bg-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-center">
+            <span className="text-slate-500 block text-[10px] sm:text-xs">Nguồn</span>
+            <strong className={`text-[11px] sm:text-xs font-mono font-bold ${isRealStandings ? 'text-emerald-400' : 'text-slate-400'}`}>
+              {isRealStandings ? '🟢 Real API' : '⚪ Pending'}
             </strong>
           </div>
         </div>
@@ -154,29 +154,29 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
         <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-emerald-400" />
-              <span>Bảng Xếp Hạng Chi Tiết ({competition.name})</span>
+              <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>BXH Chi Tiết ({competition.name})</span>
             </h3>
             {isLoadingStandings ? (
-              <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Đang tải BXH thực tế...</span>
+              <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Tải BXH...</span>
             ) : isRealStandings ? (
-              <span className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Live Standings API
+              <span className="text-[10px] sm:text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Live Standings
               </span>
             ) : (
-              <span className="text-[11px] text-slate-400 font-mono">No Data Available</span>
+              <span className="text-[10px] text-slate-400 font-mono">No Data</span>
             )}
           </div>
 
           {standings.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 space-y-3">
+            <div className="p-8 sm:p-12 text-center text-slate-400 space-y-3">
               <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
               <p className="text-sm font-medium">Chưa có dữ liệu bảng xếp hạng cho giải đấu này.</p>
               <p className="text-xs text-slate-500">Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau ít phút.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-xs min-w-[600px]">
                 <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
                   <tr>
                     <th className="py-3 px-3 text-center">Hạng</th>
@@ -209,8 +209,8 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
-                        <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5" />
-                        <span>{item.team.name}</span>
+                        <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5 shrink-0" />
+                        <span className="truncate max-w-[120px] sm:max-w-none">{item.team.name}</span>
                       </td>
                       <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.played}</td>
                       <td className="py-3 px-2 text-center text-emerald-400 font-mono font-semibold">{item.won}</td>
@@ -235,7 +235,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
                                   : res === 'D'
                                   ? 'bg-slate-600 text-white'
                                   : 'bg-red-500 text-white'
-                              }`}
+                                }`}
                             >
                               {res}
                             </span>
@@ -251,10 +251,10 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
         </div>
 
         {/* Fixtures & Results List (1 col) */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-400" />
+              <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
               <span>Kết Quả & Lịch Thi Đấu ({activeLeague})</span>
             </h3>
 
@@ -284,18 +284,18 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
                     </div>
 
                     <div className="grid grid-cols-3 items-center text-center">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <span className="text-xs font-bold text-white">{m.homeTeam.shortName}</span>
-                        <TeamLogo logo={m.homeTeam.logo} name={m.homeTeam.name} className="w-4 h-4" />
+                      <div className="flex items-center gap-1.5 justify-end overflow-hidden">
+                        <span className="text-xs font-bold text-white truncate">{m.homeTeam.shortName || m.homeTeam.name}</span>
+                        <TeamLogo logo={m.homeTeam.logo} name={m.homeTeam.name} className="w-4 h-4 shrink-0" />
                       </div>
                       <div className="font-mono font-bold text-sm text-emerald-400">
                         {m.status === 'FINISHED' || m.status === 'LIVE'
                           ? `${m.homeScore} - ${m.awayScore}`
                           : 'VS'}
                       </div>
-                      <div className="flex items-center gap-1.5 justify-start">
-                        <TeamLogo logo={m.awayTeam.logo} name={m.awayTeam.name} className="w-4 h-4" />
-                        <span className="text-xs font-bold text-white">{m.awayTeam.shortName}</span>
+                      <div className="flex items-center gap-1.5 justify-start overflow-hidden">
+                        <TeamLogo logo={m.awayTeam.logo} name={m.awayTeam.name} className="w-4 h-4 shrink-0" />
+                        <span className="text-xs font-bold text-white truncate">{m.awayTeam.shortName || m.awayTeam.name}</span>
                       </div>
                     </div>
                   </div>
