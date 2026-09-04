@@ -116,10 +116,10 @@ export type HandicapResult = 'WIN' | 'HALF_WIN' | 'PUSH' | 'HALF_LOSS' | 'LOSS';
 export interface ETLRunLog {
   id: string;
   timestamp: string;
-  trigger: 'Schedule (15m)' | 'Manual' | 'Smart Polling';
+  trigger: 'Schedule (15m)' | 'Manual' | 'Manual Admin' | 'Smart Polling' | string;
   requestsUsed: number;
   requestsRemaining: number;
   activeLiveMatches: number;
-  status: 'Success' | 'Quota Warning' | 'Rate Limited';
+  status: 'Success' | 'Quota Warning' | 'Rate Limited' | string;
   details: string;
 }

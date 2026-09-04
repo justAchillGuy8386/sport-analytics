@@ -40,7 +40,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
         const newLog: ETLRunLog = {
           id: `sync-${101 + logs.length}`,
           timestamp: new Date().toISOString(),
-          trigger: 'Manual Admin',
+          trigger: 'Manual',
           requestsUsed: quotaUsed,
           requestsRemaining: Math.max(0, 100 - quotaUsed),
           activeLiveMatches: 0,
