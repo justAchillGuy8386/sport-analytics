@@ -45,7 +45,7 @@ export const Sidebar: React.FC = () => {
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="lg:hidden bg-slate-950 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-40">
+      <div className="lg:hidden bg-slate-950/95 backdrop-blur-md border-b border-slate-800/90 p-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-cyan-400 p-[2px]">
             <div className="w-full h-full bg-slate-950 rounded-[6px] flex items-center justify-center">
@@ -58,7 +58,8 @@ export const Sidebar: React.FC = () => {
         </div>
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 hover:text-white"
+          aria-label="Toggle menu"
+          className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-300 hover:text-white active:scale-95 transition-all"
         >
           {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -80,22 +81,31 @@ export const Sidebar: React.FC = () => {
       >
         <div className="p-5 space-y-6 overflow-y-auto custom-scrollbar">
           {/* Logo & Header */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-emerald-400" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20">
+                <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-emerald-400" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="font-extrabold text-base text-white tracking-wide">
+                    FOOTBALL<span className="text-emerald-400">ANALYTICS</span>
+                  </h1>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Data Platform • Mùa 2026/27
+                </p>
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-extrabold text-base text-white tracking-wide">
-                  FOOTBALL<span className="text-emerald-400">ANALYTICS</span>
-                </h1>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Data Platform • Mùa 2026/27
-              </p>
-            </div>
+
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* League Filter Component in Sidebar */}
@@ -105,7 +115,10 @@ export const Sidebar: React.FC = () => {
             </span>
             <div className="grid grid-cols-1 gap-1">
               <button
-                onClick={() => setSelectedLeague('ALL')}
+                onClick={() => {
+                  setSelectedLeague('ALL');
+                  setIsMobileOpen(false);
+                }}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                   selectedLeague === 'ALL'
                     ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
@@ -119,7 +132,10 @@ export const Sidebar: React.FC = () => {
               {COMPETITIONS.map((comp) => (
                 <button
                   key={comp.id}
-                  onClick={() => setSelectedLeague(comp.id)}
+                  onClick={() => {
+                    setSelectedLeague(comp.id);
+                    setIsMobileOpen(false);
+                  }}
                   className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                     selectedLeague === comp.id
                       ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
