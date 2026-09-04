@@ -7,7 +7,7 @@ import { Database, Activity, Play, RefreshCw, Cpu, Server, Terminal, Sparkles, C
 
 interface ETLQuotaMonitorTabProps {
   quotaUsed: number;
-  setQuotaUsed: React.Dispatch<React.SetStateAction<number>>;
+  setQuotaUsed?: (quota: any) => void;
 }
 
 export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
