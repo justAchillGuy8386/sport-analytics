@@ -68,11 +68,38 @@ export function calculateKPIMetrics(matches: Match[]): KPIMetrics {
     else if (hScore === aScore) draws++;
     else awayWins++;
 
+    let hCorners = 0;
+    let aCorners = 0;
+    let hYellow = 0;
+    let aYellow = 0;
+    let hRed = 0;
+    let aRed = 0;
+
     if (m.stats) {
-      totalCorners += (m.stats.home.corners + m.stats.away.corners);
-      totalYellowCards += (m.stats.home.yellowCards + m.stats.away.yellowCards);
-      totalRedCards += (m.stats.home.redCards + m.stats.away.redCards);
+      hCorners = typeof m.stats.home?.corners === 'number' ? m.stats.home.corners : 0;
+      aCorners = typeof m.stats.away?.corners === 'number' ? m.stats.away.corners : 0;
+
+      hYellow = typeof m.stats.home?.yellowCards === 'number' ? m.stats.home.yellowCards : 0;
+      aYellow = typeof m.stats.away?.yellowCards === 'number' ? m.stats.away.yellowCards : 0;
+
+      hRed = typeof m.stats.home?.redCards === 'number' ? m.stats.home.redCards : 0;
+      aRed = typeof m.stats.away?.redCards === 'number' ? m.stats.away.redCards : 0;
     }
+
+    totalCorners += (hCorners + aCorners);
+    let matchYellows = hYellow + aYellow;
+    let matchReds = hRed + aRed;
+
+    // Fallback: Count cards from match events if stats object doesn't carry card details
+    if (m.events && Array.isArray(m.events)) {
+      const eventYellows = m.events.filter(e => e.type === 'yellow_card').length;
+      const eventReds = m.events.filter(e => e.type === 'red_card').length;
+      if (matchYellows === 0 && eventYellows > 0) matchYellows = eventYellows;
+      if (matchReds === 0 && eventReds > 0) matchReds = eventReds;
+    }
+
+    totalYellowCards += matchYellows;
+    totalRedCards += matchReds;
   });
 
   return {
