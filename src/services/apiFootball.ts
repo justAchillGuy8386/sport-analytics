@@ -136,7 +136,7 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
     'x-rapidapi-key': keyToUse
   };
 
-  const seasonsToTry = [2024, 2023];
+  const seasonsToTry = [2026, 2025, 2024, 2023];
   for (const season of seasonsToTry) {
     try {
       const url = `${API_SPORTS_BASE}/standings?league=${leagueId}&season=${season}`;
@@ -225,7 +225,7 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
 
   // 2. Fetch recent finished & upcoming matches for target leagues
   if (rawFixtures.length < 8) {
-    const seasonsToTry = [2024, 2023];
+    const seasonsToTry = [2026, 2025];
     for (const season of seasonsToTry) {
       if (rawFixtures.length >= 10) break;
 
@@ -270,9 +270,9 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
     }
   }
 
-  // 3. Fetch real statistics for top 3 finished matches only to keep API requests minimal
+  // 3. Fetch real statistics for top 3 finished/live matches only to keep API requests minimal
   const matchesNeedingStats = rawFixtures
-    .filter(item => item.fixture?.id && ['FT', 'AET', 'PEN', '1H', '2H', 'HT', 'ET', 'LIVE'].includes(item.fixture?.status?.short))
+    .filter(item => item.fixture?.id && ['FT', 'AET', 'PEN', '1H', '2H', 'HT', 'ET', 'LIVE', 'IN_PLAY'].includes(item.fixture?.status?.short))
     .slice(0, 3);
 
   const statsMap = new Map<number, any[]>();
@@ -295,8 +295,10 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
   const results: Match[] = rawFixtures.map((item: any) => {
     const statusShort = item.fixture?.status?.short || 'NS';
     let status: Match['status'] = 'UPCOMING';
-    if (['1H', '2H', 'HT', 'ET', 'P', 'BT', 'LIVE'].includes(statusShort)) status = 'LIVE';
+    if (['1H', '2H', 'HT', 'ET', 'P', 'BT', 'LIVE', 'IN_PLAY', 'INT'].includes(statusShort)) status = 'LIVE';
     else if (['FT', 'AET', 'PEN'].includes(statusShort)) status = 'FINISHED';
+    else if (['PST', 'SUSP'].includes(statusShort)) status = 'POSTPONED';
+    else if (['CANC', 'ABD'].includes(statusShort)) status = 'CANCELLED';
 
     const homeTeamId = item.teams?.home?.id?.toString() || 'home';
     const awayTeamId = item.teams?.away?.id?.toString() || 'away';
