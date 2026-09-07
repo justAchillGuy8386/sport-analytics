@@ -22,7 +22,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 console.log('🔗 Connecting to Supabase URL:', SUPABASE_URL);
 
-// Options to disable realtime websocket in Node.js background environment
 const clientOptions = {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   realtime: { timeout: 1000 }
@@ -45,7 +44,6 @@ const LEAGUE_MAP = {
   UCL: 2
 };
 
-// Helper: Format Date object to YYYY-MM-DD
 function formatDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -58,7 +56,6 @@ async function syncMatches() {
   const todayStr = formatDate(now);
   console.log(`🚀 Starting Dynamic API-Football Sync Job at ${now.toISOString()} (Today: ${todayStr})...`);
 
-  // Dynamically calculate date range: 3 days ago to 3 days in the future
   const past3Days = new Date(now);
   past3Days.setDate(now.getDate() - 3);
 
@@ -68,7 +65,6 @@ async function syncMatches() {
   const fromStr = formatDate(past3Days);
   const toStr = formatDate(future3Days);
 
-  // Dynamically calculate European football season year based on execution date
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const dynamicSeason = currentMonth >= 8 ? currentYear : currentYear - 1;
@@ -83,7 +79,7 @@ async function syncMatches() {
   let allFixtures = [];
   const targetLeagueIds = Object.values(LEAGUE_MAP);
 
-  // 1. Fetch Today's Matches worldwide using date parameter
+  // 1. Fetch Today's Matches worldwide
   try {
     const todayUrl = `https://v3.football.api-sports.io/fixtures?date=${todayStr}`;
     const todayRes = await fetch(todayUrl, { headers });
@@ -99,8 +95,8 @@ async function syncMatches() {
     console.error('Error fetching today fixtures:', err.message);
   }
 
-  // 2. Fetch matches for main leagues using league + season + date range (from -> to)
-  const topLeagues = [39, 140, 135]; // PL, LL, SA
+  // 2. Fetch matches for 6 main leagues
+  const topLeagues = [39, 140, 135, 78, 61, 2];
   for (const lId of topLeagues) {
     try {
       const leagueUrl = `https://v3.football.api-sports.io/fixtures?league=${lId}&season=${dynamicSeason}&from=${fromStr}&to=${toStr}`;
@@ -117,30 +113,11 @@ async function syncMatches() {
     }
   }
 
-  // 3. Fallback: If still few matches, fetch last 5 for top leagues
-  if (allFixtures.length < 5) {
-    for (const lId of topLeagues) {
-      try {
-        const fallbackUrl = `https://v3.football.api-sports.io/fixtures?league=${lId}&season=${dynamicSeason}&last=5`;
-        const res = await fetch(fallbackUrl, { headers });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.response && Array.isArray(data.response)) {
-            allFixtures.push(...data.response);
-          }
-        }
-      } catch (e) {
-        console.error(`Fallback error for league ${lId}:`, e.message);
-      }
-    }
-  }
-
   if (allFixtures.length === 0) {
     console.log('⚠️ No fixtures retrieved. Job completed gracefully.');
     return;
   }
 
-  // Deduplicate by fixture ID
   const uniqueMap = new Map();
   for (const item of allFixtures) {
     if (item.fixture?.id) {
@@ -150,14 +127,30 @@ async function syncMatches() {
   const uniqueFixtures = Array.from(uniqueMap.values());
   console.log(`📦 Deduplicated ${uniqueFixtures.length} total dynamic matches to insert into Supabase.`);
 
-  // Map to Supabase table schema
   const rows = uniqueFixtures.map(item => {
     const statusShort = item.fixture?.status?.short || 'NS';
     let status = 'UPCOMING';
-    if (['1H', '2H', 'HT', 'ET', 'P', 'BT', 'LIVE'].includes(statusShort)) status = 'LIVE';
+    if (['1H', '2H', 'HT', 'ET', 'P', 'BT', 'LIVE', 'IN_PLAY'].includes(statusShort)) status = 'LIVE';
     else if (['FT', 'AET', 'PEN'].includes(statusShort)) status = 'FINISHED';
 
+    if (status === 'LIVE' && item.fixture?.date) {
+      const startTime = new Date(item.fixture.date).getTime();
+      if (!isNaN(startTime) && (Date.now() - startTime) > 3 * 60 * 60 * 1000) {
+        status = 'FINISHED';
+      }
+    }
+
     const leagueCode = Object.keys(LEAGUE_MAP).find(k => LEAGUE_MAP[k] === item.league?.id) || 'PL';
+    const hScore = item.goals?.home ?? 0;
+    const aScore = item.goals?.away ?? 0;
+
+    const events = (item.events || []).map((e, idx) => ({
+      id: `ev-${item.fixture?.id}-${idx}`,
+      time: e.time?.elapsed || 0,
+      teamId: e.team?.id?.toString() || '',
+      player: e.player?.name || 'Player',
+      type: e.type === 'Goal' ? 'goal' : e.detail?.includes('Yellow') ? 'yellow_card' : e.detail?.includes('Red') ? 'red_card' : 'sub'
+    }));
 
     return {
       id: item.fixture?.id?.toString(),
@@ -170,18 +163,19 @@ async function syncMatches() {
       referee: item.fixture?.referee || '',
       elapsed_time: item.fixture?.status?.elapsed || 0,
       home_team_id: item.teams?.home?.id?.toString() || '',
-      home_team_name: item.teams?.home?.name || '',
+      home_team_name: item.teams?.name || item.teams?.home?.name || '',
       home_team_logo: item.teams?.home?.logo || '',
       away_team_id: item.teams?.away?.id?.toString() || '',
       away_team_name: item.teams?.away?.name || '',
       away_team_logo: item.teams?.away?.logo || '',
-      home_score: item.goals?.home ?? 0,
-      away_score: item.goals?.away ?? 0,
+      home_score: hScore,
+      away_score: aScore,
+      stats: item.statistics || {},
+      events: events,
       updated_at: new Date().toISOString()
     };
   });
 
-  // Upsert into Supabase matches table
   try {
     const { data, error } = await supabase
       .from('matches')
