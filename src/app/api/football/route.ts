@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getMatchesFromSupabase } from '@/services/supabaseService';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const leagueCode = searchParams.get('league') as any;
 
   try {
-    // 100% Pure Database Fetching: Always query matches directly from Supabase DB
+    // Read 100% directly from Supabase Database (0 API-Football requests consumed)
     const dbMatches = await getMatchesFromSupabase(leagueCode);
 
     return NextResponse.json({

@@ -25,84 +25,51 @@ const FootballContext = createContext<FootballContextType | undefined>(undefined
 
 export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedLeague, setSelectedLeague] = useState<LeagueCode | 'ALL'>('ALL');
-  const [quotaUsed, setQuotaUsed] = useState<number>(0);
+  const [quotaUsed, setQuotaUsed] = useState<number>(100);
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [isRealDataMode, setIsRealDataMode] = useState<boolean>(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
 
-  // Clear any legacy cached matches from localStorage on startup
-  useEffect(() => {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('fb_matches') || key.includes('mock') || key.includes('m-live'))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
-    } catch (e) {
-      console.error('Error clearing legacy cache:', e);
-    }
+  // No-op refreshQuota to prevent calling external API
+  const refreshQuota = useCallback(async () => {
+    // 100% Database-only mode enabled
   }, []);
 
-  // Fetch real-time quota status from API-Football /status
-  const refreshQuota = useCallback(async () => {
-    if (!isRealDataMode) return;
-    try {
-      const res = await fetch(`/api/football/quota?apiKey=${encodeURIComponent(apiKey)}`);
-      const result = await res.json();
-      if (result.success && typeof result.current === 'number') {
-        setQuotaUsed(result.current);
-      }
-    } catch (err) {
-      console.error('Error fetching API quota:', err);
-    }
-  }, [apiKey, isRealDataMode]);
-
+  // Load matches 100% from Supabase Database
   useEffect(() => {
-    refreshQuota();
-  }, [refreshQuota]);
-
-  // Load fresh data directly from Database & Live Stream (No temporary cache)
-  useEffect(() => {
-    async function loadData() {
-      if (!isRealDataMode) {
-        setMatches([]);
-        setSelectedMatchId('');
-        setIsLoadingApi(false);
-        return;
-      }
-
+    async function loadDataFromDb() {
       setIsLoadingApi(true);
       try {
-        const res = await fetch(`/api/football?apiKey=${encodeURIComponent(apiKey)}&league=${selectedLeague}`);
+        const res = await fetch(`/api/football?league=${selectedLeague}&_t=${Date.now()}`, { cache: 'no-store' });
         const result = await res.json();
         if (result.success && Array.isArray(result.data)) {
           setMatches(result.data);
           if (result.data.length > 0) {
-            setSelectedMatchId(result.data[0].id);
+            setSelectedMatchId(prev => (prev && result.data.some((m: Match) => m.id === prev)) ? prev : result.data[0].id);
           } else {
             setSelectedMatchId('');
           }
-        } else {
-          setMatches([]);
-          setSelectedMatchId('');
         }
       } catch (err) {
-        console.error('Fetch error:', err);
-        setMatches([]);
-        setSelectedMatchId('');
+        console.error('Database fetch error:', err);
       } finally {
         setIsLoadingApi(false);
-        refreshQuota();
       }
     }
 
-    loadData();
-  }, [isRealDataMode, apiKey, selectedLeague, refreshQuota]);
+    // Initial load
+    loadDataFromDb();
+
+    // 10-minute automatic polling interval to re-fetch from Supabase Database
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    const intervalId = setInterval(() => {
+      loadDataFromDb();
+    }, TEN_MINUTES_MS);
+
+    return () => clearInterval(intervalId);
+  }, [selectedLeague]);
 
   return (
     <FootballContext.Provider
@@ -119,7 +86,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setQuotaUsed,
         refreshQuota,
         selectedMatchId,
-        setSelectedMatchId,
+        setSelectedMatchId
       }}
     >
       {children}
