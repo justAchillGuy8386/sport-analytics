@@ -95,6 +95,7 @@ export interface Match {
   };
   odds?: BookmakerOdds;
   oddsHistory?: { timestamp: string; homeWin: number; draw: number; awayWin: number; handicapLine: number }[];
+  updatedAt?: string;
 }
 
 export interface StandingItem {
