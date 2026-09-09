@@ -7,7 +7,7 @@ import { OverviewTab } from '@/components/OverviewTab';
 
 export default function OverviewPage() {
   const router = useRouter();
-  const { matches, selectedLeague, isLoadingApi, setSelectedMatchId } = useFootball();
+  const { matches, allMatches, selectedLeague, isLoadingApi, setSelectedMatchId } = useFootball();
 
   const handleSelectMatch = (matchId: string) => {
     setSelectedMatchId(matchId);
@@ -24,6 +24,7 @@ export default function OverviewPage() {
 
       <OverviewTab
         matches={matches}
+        allMatches={allMatches}
         selectedLeague={selectedLeague}
         onSelectMatch={handleSelectMatch}
       />
