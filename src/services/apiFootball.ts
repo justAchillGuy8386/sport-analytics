@@ -147,11 +147,13 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
         const standingsArray = data.response?.[0]?.league?.standings?.[0];
         if (Array.isArray(standingsArray) && standingsArray.length > 0) {
           const result: StandingItem[] = standingsArray.map((item: any) => {
-            const formStr: string = item.form || 'WWDDD';
+            const formStr: string = item.form || '';
             const formArray: ('W' | 'D' | 'L')[] = formStr
-              .split('')
-              .slice(-5)
-              .map(c => (c === 'W' ? 'W' : c === 'D' ? 'D' : 'L'));
+              ? formStr
+                  .split('')
+                  .slice(-5)
+                  .map(c => (c === 'W' ? 'W' : c === 'D' ? 'D' : 'L'))
+              : [];
 
             return {
               rank: item.rank,
