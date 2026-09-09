@@ -1,12 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Match, LeagueCode } from '@/types/football';
 
 const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '';
 
 interface FootballContextType {
   matches: Match[];
+  allMatches: Match[];
   isLoadingApi: boolean;
   selectedLeague: LeagueCode | 'ALL';
   setSelectedLeague: (league: LeagueCode | 'ALL') => void;
@@ -28,7 +29,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [quotaUsed, setQuotaUsed] = useState<number>(100);
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [isRealDataMode, setIsRealDataMode] = useState<boolean>(true);
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
 
@@ -37,20 +38,32 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // 100% Database-only mode enabled
   }, []);
 
-  // Load matches 100% from Supabase Database
+  // Filter matches for current selected league, or return all when 'ALL' is selected
+  const matches = useMemo(() => {
+    if (selectedLeague === 'ALL') {
+      return allMatches;
+    }
+    return allMatches.filter(m => m.leagueId === selectedLeague);
+  }, [allMatches, selectedLeague]);
+
+  // Keep selectedMatchId synced with the currently visible matches
+  useEffect(() => {
+    if (matches.length > 0) {
+      setSelectedMatchId(prev => (prev && matches.some(m => m.id === prev)) ? prev : matches[0].id);
+    } else {
+      setSelectedMatchId('');
+    }
+  }, [matches]);
+
+  // Load ALL matches 100% from Supabase Database on mount and on a 10-minute interval
   useEffect(() => {
     async function loadDataFromDb() {
       setIsLoadingApi(true);
       try {
-        const res = await fetch(`/api/football?league=${selectedLeague}&_t=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(`/api/football?league=ALL&_t=${Date.now()}`, { cache: 'no-store' });
         const result = await res.json();
         if (result.success && Array.isArray(result.data)) {
-          setMatches(result.data);
-          if (result.data.length > 0) {
-            setSelectedMatchId(prev => (prev && result.data.some((m: Match) => m.id === prev)) ? prev : result.data[0].id);
-          } else {
-            setSelectedMatchId('');
-          }
+          setAllMatches(result.data);
         }
       } catch (err) {
         console.error('Database fetch error:', err);
@@ -69,12 +82,13 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, TEN_MINUTES_MS);
 
     return () => clearInterval(intervalId);
-  }, [selectedLeague]);
+  }, []);
 
   return (
     <FootballContext.Provider
       value={{
         matches,
+        allMatches,
         isLoadingApi,
         selectedLeague,
         setSelectedLeague,
