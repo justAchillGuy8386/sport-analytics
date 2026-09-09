@@ -1,3 +1,4 @@
+
 import { Match, LeagueCode, MatchStatus, TeamStatistics } from '@/types/football';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
@@ -116,7 +117,7 @@ export async function upsertMatchesToSupabase(matches: Match[]): Promise<number>
 /**
  * Read saved matches directly from Supabase database (Bypasses RLS with Admin Client)
  */
-export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', limit: number = 100): Promise<Match[]> {
+export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', limit: number = 500): Promise<Match[]> {
   try {
     const adminClient = getSupabaseAdmin();
     let query = adminClient
