@@ -1,4 +1,22 @@
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
+
+// Auto-load .env.local if run locally
+try {
+  const envPath = path.resolve(__dirname, '../.env.local');
+  if (fs.existsSync(envPath)) {
+    const envText = fs.readFileSync(envPath, 'utf8');
+    envText.split(/\r?\n/).forEach(line => {
+      const parts = line.split('=');
+      if (parts.length >= 2 && parts[0].trim() && !parts[0].trim().startsWith('#')) {
+        const key = parts[0].trim();
+        const val = parts.slice(1).join('=').trim();
+        if (!process.env[key]) process.env[key] = val;
+      }
+    });
+  }
+} catch (e) {}
 
 const cleanString = (val) => {
   if (!val || typeof val !== 'string') return null;
@@ -78,6 +96,22 @@ async function syncMatches() {
 
   let allFixtures = [];
   const targetLeagueIds = Object.values(LEAGUE_MAP);
+
+  // 0. Fetch LIVE matches worldwide first (Real-time in-play fixtures)
+  try {
+    const liveUrl = 'https://v3.football.api-sports.io/fixtures?live=all';
+    const liveRes = await fetch(liveUrl, { headers });
+    if (liveRes.ok) {
+      const liveData = await liveRes.json();
+      if (liveData.response && Array.isArray(liveData.response)) {
+        const filteredLive = liveData.response.filter(item => targetLeagueIds.includes(item.league?.id));
+        console.log(`🔴 Found ${filteredLive.length} target league matches currently LIVE!`);
+        allFixtures.push(...filteredLive);
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching live matches:', err.message);
+  }
 
   // 1. Fetch Today's Matches worldwide
   try {
