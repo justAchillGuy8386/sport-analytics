@@ -17,10 +17,13 @@ export interface KPIMetrics {
 }
 
 export function calculateKPIMetrics(matches: Match[]): KPIMetrics {
-  const matchesWithScores = matches.filter(
-    m => m.homeScore !== null && m.awayScore !== null && typeof m.homeScore === 'number' && typeof m.awayScore === 'number'
+  // Strictly calculate KPI metrics only for played matches (FINISHED or LIVE)
+  const playedMatches = matches.filter(
+    m => (m.status === 'FINISHED' || m.status === 'LIVE') &&
+         m.homeScore !== null && m.awayScore !== null &&
+         typeof m.homeScore === 'number' && typeof m.awayScore === 'number'
   );
-  const finishedCount = matchesWithScores.length;
+  const finishedCount = playedMatches.length;
 
   if (finishedCount === 0) {
     return {
@@ -53,7 +56,7 @@ export function calculateKPIMetrics(matches: Match[]): KPIMetrics {
   let draws = 0;
   let awayWins = 0;
 
-  matchesWithScores.forEach(m => {
+  playedMatches.forEach(m => {
     const hScore = m.homeScore!;
     const aScore = m.awayScore!;
     const matchGoals = hScore + aScore;
@@ -86,7 +89,6 @@ export function calculateKPIMetrics(matches: Match[]): KPIMetrics {
       aRed = typeof m.stats.away?.redCards === 'number' ? m.stats.away.redCards : 0;
     }
 
-    totalCorners += (hCorners + aCorners);
     let matchYellows = hYellow + aYellow;
     let matchReds = hRed + aRed;
 
@@ -98,6 +100,7 @@ export function calculateKPIMetrics(matches: Match[]): KPIMetrics {
       if (matchReds === 0 && eventReds > 0) matchReds = eventReds;
     }
 
+    totalCorners += (hCorners + aCorners);
     totalYellowCards += matchYellows;
     totalRedCards += matchReds;
   });
@@ -111,7 +114,7 @@ export function calculateKPIMetrics(matches: Match[]): KPIMetrics {
     avgYellowCards: Number((totalYellowCards / finishedCount).toFixed(2)),
     avgRedCards: Number((totalRedCards / finishedCount).toFixed(2)),
     bttsRate: Number(((bttsCount / finishedCount) * 100).toFixed(1)),
-    cleanSheetRate: Number(((cleanSheetCount / (finishedCount * 2)) * 100).toFixed(1)),
+    cleanSheetRate: Number(((cleanSheetCount / finishedCount) * 100).toFixed(1)),
     over25Rate: Number(((over25Count / finishedCount) * 100).toFixed(1)),
     homeWinRate: Number(((homeWins / finishedCount) * 100).toFixed(1)),
     drawRate: Number(((draws / finishedCount) * 100).toFixed(1)),

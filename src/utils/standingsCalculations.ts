@@ -89,11 +89,8 @@ export function calculateStandingsFromMatches(matches: Match[]): StandingItem[] 
 
   const standingsList = Array.from(teamMap.values()).map(t => {
     const goalDiff = t.goalsFor - t.goalsAgainst;
+    // Only take the actual recent matches played (up to 5), strictly NO fake padding
     const last5Form = t.form.slice(-5);
-    // Pad form array if less than 5 matches played
-    while (last5Form.length < 5) {
-      last5Form.unshift('W');
-    }
 
     return {
       rank: 0,
