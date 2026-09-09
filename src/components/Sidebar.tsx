@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useFootball } from '@/context/FootballContext';
@@ -16,12 +16,26 @@ export const Sidebar: React.FC = () => {
     selectedLeague, setSelectedLeague, 
     apiKey, setApiKey, 
     isRealDataMode, setIsRealDataMode, 
-    quotaUsed 
+    quotaUsed,
+    allMatches = []
   } = useFootball();
 
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
   const [inputKey, setInputKey] = useState<string>(apiKey);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isMobileOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+  }, [isMobileOpen]);
 
   const isQuotaWarning = quotaUsed >= 90;
 
@@ -73,46 +87,48 @@ export const Sidebar: React.FC = () => {
       {/* Sidebar Overlay for Mobile */}
       {isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40"
+          className="lg:hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 touch-none overscroll-none"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Left Sidebar Main Body */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 w-72 bg-slate-950/95 border-r border-slate-800/90 backdrop-blur-md flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] h-[100dvh] max-h-[100dvh] bg-slate-950/98 border-r border-slate-800/90 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-5 space-y-6 overflow-y-auto custom-scrollbar">
-          {/* Logo & Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20">
-                <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-emerald-400" />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="font-extrabold text-base text-white tracking-wide">
-                    FOOTBALL<span className="text-emerald-400">ANALYTICS</span>
-                  </h1>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Data Platform • Mùa 2026/27
-                </p>
+        {/* Top Header - Always pinned at the top of the sidebar */}
+        <div className="p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-slate-900 bg-slate-950">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
-
-            <button
-              onClick={() => setIsMobileOpen(false)}
-              className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-extrabold text-base text-white tracking-wide">
+                  FOOTBALL<span className="text-emerald-400">ANALYTICS</span>
+                </h1>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Data Platform • Mùa 2026/27
+              </p>
+            </div>
           </div>
 
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            className="lg:hidden p-2 text-slate-400 hover:text-white rounded-xl bg-slate-900 border border-slate-800 active:scale-95 transition-all"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Center Content - Smooth internal scrolling, doesn't bounce parent */}
+        <div className="p-4 sm:p-5 space-y-6 overflow-y-auto overscroll-contain flex-1 custom-scrollbar">
           {/* League Filter Component in Sidebar */}
           <div className="space-y-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
@@ -131,29 +147,50 @@ export const Sidebar: React.FC = () => {
                 }`}
               >
                 <span>🌍 Tất cả (6 Giải)</span>
-                {selectedLeague === 'ALL' && <Sparkles className="w-3.5 h-3.5 text-slate-950" />}
+                <div className="flex items-center gap-1.5">
+                  {allMatches.length > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                      selectedLeague === 'ALL' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {allMatches.length} trận
+                    </span>
+                  )}
+                  {selectedLeague === 'ALL' && <Sparkles className="w-3.5 h-3.5 text-slate-950" />}
+                </div>
               </button>
 
-              {COMPETITIONS.map((comp) => (
-                <button
-                  key={comp.id}
-                  onClick={() => {
-                    setSelectedLeague(comp.id);
-                    setIsMobileOpen(false);
-                  }}
-                  className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                    selectedLeague === comp.id
-                      ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-                      : 'bg-slate-900/40 text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span>{comp.flag}</span>
-                    <span>{comp.name}</span>
-                  </span>
-                  <span className="text-[10px] opacity-75 font-mono">{comp.id}</span>
-                </button>
-              ))}
+              {COMPETITIONS.map((comp) => {
+                const compMatchCount = allMatches.filter(m => m.leagueId === comp.id).length;
+                return (
+                  <button
+                    key={comp.id}
+                    onClick={() => {
+                      setSelectedLeague(comp.id);
+                      setIsMobileOpen(false);
+                    }}
+                    className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                      selectedLeague === comp.id
+                        ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
+                        : 'bg-slate-900/40 text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{comp.flag}</span>
+                      <span>{comp.name}</span>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {compMatchCount > 0 && (
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                          selectedLeague === comp.id ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800/80 text-slate-400'
+                        }`}>
+                          {compMatchCount}
+                        </span>
+                      )}
+                      <span className="text-[10px] opacity-75 font-mono">{comp.id}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -187,8 +224,8 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer Sidebar Badges & API Key Modal Switcher */}
-        <div className="p-4 border-t border-slate-900 bg-slate-950 space-y-3">
+        {/* Footer Sidebar Badges & API Key Modal Switcher - Always pinned at bottom */}
+        <div className="p-4 border-t border-slate-900 bg-slate-950 space-y-3 shrink-0">
           {/* API Status Button */}
           <button
             onClick={() => setShowKeyModal(true)}

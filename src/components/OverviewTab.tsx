@@ -9,31 +9,35 @@ import {
   Trophy, Target, Flame, Shield, Flag, 
   Percent, TrendingUp, Home, Scale, PlaneLanding, Radio, Info
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 interface OverviewTabProps {
   matches: Match[];
+  allMatches?: Match[];
   selectedLeague: LeagueCode | 'ALL';
   onSelectMatch: (matchId: string) => void;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   matches,
+  allMatches = [],
   selectedLeague,
   onSelectMatch
 }) => {
+  const datasetForComparison = allMatches.length > 0 ? allMatches : matches;
   const filteredMatches = selectedLeague === 'ALL'
-    ? matches
-    : matches.filter(m => m.leagueId === selectedLeague);
+    ? (datasetForComparison.length > 0 ? datasetForComparison : matches)
+    : datasetForComparison.filter(m => m.leagueId === selectedLeague);
 
+  const selectedComp = COMPETITIONS.find(c => c.id === selectedLeague);
   const kpi = calculateKPIMetrics(filteredMatches);
 
   // Filter ALL live matches from real match data
   const liveMatches = filteredMatches.filter(m => m.status === 'LIVE');
 
-  // Prepare chart data comparing leagues
+  // Prepare chart data comparing leagues using full dataset across all leagues
   const leagueComparisonData = COMPETITIONS.map(comp => {
-    const compMatches = matches.filter(m => m.leagueId === comp.id);
+    const compMatches = datasetForComparison.filter(m => m.leagueId === comp.id);
     const compKpi = calculateKPIMetrics(compMatches);
     return {
       name: comp.id,
@@ -42,7 +46,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       bttsRate: compKpi.bttsRate,
       over25Rate: compKpi.over25Rate,
       avgCorners: isNaN(compKpi.avgCorners) ? 0 : compKpi.avgCorners,
-      avgYellowCards: isNaN(compKpi.avgYellowCards) ? 0 : compKpi.avgYellowCards
+      avgYellowCards: isNaN(compKpi.avgYellowCards) ? 0 : compKpi.avgYellowCards,
+      isSelected: comp.id === selectedLeague
     };
   });
 
@@ -121,20 +126,26 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </span>
           </div>
           <span className="text-[11px] text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full shrink-0 font-mono">
-            {matches.length} Trận Trong Database
+            {selectedLeague === 'ALL'
+              ? `${datasetForComparison.length} Trận Trong Database (Tất cả 6 giải)`
+              : `${filteredMatches.length} Trận ${selectedComp?.name || selectedLeague} • Tổng ${datasetForComparison.length} Trận Trong DB`}
           </span>
         </div>
       )}
 
       {/* KPI Cards Grid */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-800/80 pb-2">
           <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-400" />
-            Chỉ Số KPI Tổng Quan Các Giải Đấu
+            {selectedLeague === 'ALL'
+              ? 'Chỉ Số KPI Tổng Quan - Tất Cả 6 Giải Đấu'
+              : `Chỉ Số KPI - ${selectedComp?.name || selectedLeague} (${selectedLeague})`}
           </h2>
           <span className="text-xs text-slate-400 font-mono">
-            Dữ liệu thực tế: {kpi.finishedMatches}/{kpi.totalMatches} trận
+            {selectedLeague === 'ALL'
+              ? `Dữ liệu thực tế: ${kpi.finishedMatches}/${kpi.totalMatches} trận đã đấu (6 giải)`
+              : `${selectedComp?.flag || '⚽'} Dữ liệu thực tế: ${kpi.finishedMatches}/${kpi.totalMatches} trận đã đấu (${selectedLeague})`}
           </span>
         </div>
 
@@ -142,11 +153,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {/* 1. Total Matches */}
           <div className="bg-slate-900/80 border border-slate-800 p-3.5 sm:p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-1.5 gap-1">
-              <span className="text-[11px] sm:text-xs font-medium truncate">Tổng Trận Đấu</span>
+              <span className="text-[11px] sm:text-xs font-medium truncate">Trận Đã Đấu</span>
               <Trophy className="w-4 h-4 text-blue-400 shrink-0" />
             </div>
-            <div className="text-xl sm:text-2xl font-black text-white font-mono">{kpi.totalMatches}</div>
-            <span className="text-[10px] text-slate-500 block mt-1">Dữ liệu từ Database</span>
+            <div className="text-xl sm:text-2xl font-black text-white font-mono">{kpi.finishedMatches}</div>
+            <span className="text-[10px] text-slate-500 block mt-1">
+              {selectedLeague === 'ALL' 
+                ? `Trên tổng ${kpi.totalMatches} trận (6 giải)` 
+                : `Trên tổng ${kpi.totalMatches} trận ${selectedLeague}`}
+            </span>
           </div>
 
           {/* 2. Total Goals */}
@@ -222,7 +237,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {/* 9. Over 2.5 Goals */}
           <div className="bg-slate-900/80 border border-slate-800 p-3.5 sm:p-4 rounded-xl hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between text-slate-400 mb-1.5 gap-1">
-              <span className="text-[11px] sm:text-xs font-medium truncate">Nổ Tài &gt; 2.5 %</span>
+              <span className="text-[11px] sm:text-xs font-medium truncate">Nổ Tài 2.5 %</span>
               <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0" />
             </div>
             <div className="text-xl sm:text-2xl font-black text-cyan-400 font-mono">{kpi.over25Rate}%</div>
@@ -268,7 +283,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-xs sm:text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <Flame className="w-4 h-4 text-amber-400" />
-              So Sánh Bàn Thắng &amp; Tỷ Lệ Tài 2.5 Giữa Các Giải
+              So Sánh Bàn Thắng Giữa Các Giải
+              {selectedLeague !== 'ALL' && (
+                <span className="text-[11px] text-emerald-400 font-normal">
+                  (Đang chọn: {selectedComp?.name})
+                </span>
+              )}
             </h3>
           </div>
           <div className="h-64 sm:h-72 w-full">
@@ -281,7 +301,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
                   labelFormatter={(label) => COMPETITIONS.find(c => c.id === label)?.name || label}
                 />
-                <Bar dataKey="avgGoals" name="Trung bình bàn thắng" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="avgGoals" name="Trung bình bàn thắng" radius={[4, 4, 0, 0]}>
+                  {leagueComparisonData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.name === selectedLeague ? '#10b981' : '#f59e0b'}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -293,6 +320,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <h3 className="text-xs sm:text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <Flag className="w-4 h-4 text-cyan-400" />
               So Sánh Tỷ Lệ BTTS (%) &amp; Số Góc Trung Bình
+              {selectedLeague !== 'ALL' && (
+                <span className="text-[11px] text-emerald-400 font-normal">
+                  (Đang chọn: {selectedComp?.name})
+                </span>
+              )}
             </h3>
           </div>
           <div className="h-64 sm:h-72 w-full">

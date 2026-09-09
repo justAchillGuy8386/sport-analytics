@@ -25,6 +25,13 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
     selectedLeague === 'ALL' ? 'PL' : selectedLeague
   );
 
+  // Synchronize activeLeague when user changes selectedLeague from Sidebar
+  useEffect(() => {
+    if (selectedLeague !== 'ALL') {
+      setActiveLeague(selectedLeague);
+    }
+  }, [selectedLeague]);
+
   const [standings, setStandings] = useState<StandingItem[]>([]);
   const [isLoadingStandings, setIsLoadingStandings] = useState<boolean>(false);
   const [isRealStandings, setIsRealStandings] = useState<boolean>(false);
@@ -36,8 +43,8 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
   useEffect(() => {
     async function loadStandings() {
       // Check localStorage persistent cache first
-      const cacheKey = `fb_standings_v3_${activeLeague}`;
-      const cacheTimeKey = `fb_standings_time_v3_${activeLeague}`;
+      const cacheKey = `fb_standings_v5_${activeLeague}`;
+      const cacheTimeKey = `fb_standings_time_v5_${activeLeague}`;
 
       try {
         const cachedData = localStorage.getItem(cacheKey);
@@ -227,20 +234,26 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-1">
-                          {item.form.map((res, i) => (
-                            <span
-                              key={i}
-                              className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
-                                res === 'W'
-                                  ? 'bg-emerald-500 text-slate-950'
-                                  : res === 'D'
-                                  ? 'bg-slate-600 text-white'
-                                  : 'bg-red-500 text-white'
-                              }`}
-                            >
-                              {res}
-                            </span>
-                          ))}
+                          {(() => {
+                            const validForm = (item.form || []).slice(-Math.min(item.played, 5));
+                            if (validForm.length === 0) {
+                              return <span className="text-slate-600 font-mono text-xs">-</span>;
+                            }
+                            return validForm.map((res, i) => (
+                              <span
+                                key={i}
+                                className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
+                                  res === 'W'
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : res === 'D'
+                                    ? 'bg-slate-600 text-white'
+                                    : 'bg-red-500 text-white'
+                                }`}
+                              >
+                                {res}
+                              </span>
+                            ));
+                          })()}
                         </div>
                       </td>
                     </tr>
