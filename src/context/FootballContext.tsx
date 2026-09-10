@@ -64,10 +64,12 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [matches]);
 
-  // Load ALL matches 100% from Supabase Database on mount and on a 10-minute interval
+  const hasLiveMatches = useMemo(() => allMatches.some(m => m.status === 'LIVE'), [allMatches]);
+
+  // Load ALL matches 100% from Supabase Database on mount and with Smart Polling
   useEffect(() => {
-    async function loadDataFromDb() {
-      setIsLoadingApi(true);
+    async function loadDataFromDb(isBackground = false) {
+      if (!isBackground) setIsLoadingApi(true);
       try {
         const res = await fetch(`/api/football?league=ALL&_t=${Date.now()}`, { cache: 'no-store' });
         const result = await res.json();
@@ -77,22 +79,23 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (err) {
         console.error('Database fetch error:', err);
       } finally {
-        setIsLoadingApi(false);
+        if (!isBackground) setIsLoadingApi(false);
       }
     }
 
     // Initial load
-    loadDataFromDb();
+    loadDataFromDb(allMatches.length > 0);
     refreshQuota();
 
-    // 10-minute automatic polling interval to re-fetch from Supabase Database
-    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    // Smart Polling: 30s when matches are LIVE, 10 minutes otherwise (0 Goal API quota consumed)
+    const intervalMs = hasLiveMatches ? 30 * 1000 : 10 * 60 * 1000;
+
     const intervalId = setInterval(() => {
-      loadDataFromDb();
-    }, TEN_MINUTES_MS);
+      loadDataFromDb(true);
+    }, intervalMs);
 
     return () => clearInterval(intervalId);
-  }, [refreshQuota]);
+  }, [refreshQuota, hasLiveMatches]);
 
   return (
     <FootballContext.Provider

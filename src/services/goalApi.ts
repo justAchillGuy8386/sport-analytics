@@ -247,10 +247,10 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
 export function mapGoalFixtureToMatch(f: any, leagueCode: LeagueCode): Match {
   const statusRaw = (f.matchStatus || '').toUpperCase();
   let status: MatchStatus = 'UPCOMING';
-  if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
-    status = 'LIVE';
-  } else if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
+  if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
     status = 'FINISHED';
+  } else if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
+    status = 'LIVE';
   } else if (['POSTPONED', 'PST'].includes(statusRaw)) {
     status = 'POSTPONED';
   } else if (['CANCELLED', 'CANC', 'ABD'].includes(statusRaw)) {
@@ -342,8 +342,8 @@ export async function fetchRealFixtures(apiKey?: string, leagueCode?: LeagueCode
   for (const [code, id] of targetLeagues) {
     try {
       const [resResults, resSched] = await Promise.all([
-        fetch(`${GOAL_API_BASE}/results/league/${id}?limit=6`, { headers, cache: 'no-store' }),
-        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${id}&status=SCHEDULED&limit=4`, { headers, cache: 'no-store' })
+        fetch(`${GOAL_API_BASE}/results/league/${id}?limit=15`, { headers, cache: 'no-store' }),
+        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${id}&status=SCHEDULED&limit=10`, { headers, cache: 'no-store' })
       ]);
 
       if (resResults.ok) {
