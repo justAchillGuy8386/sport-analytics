@@ -25,12 +25,16 @@ const cleanString = (val) => {
   return trimmed;
 };
 
-const API_FOOTBALL_KEY = cleanString(process.env.API_FOOTBALL_KEY) || cleanString(process.env.NEXT_PUBLIC_API_FOOTBALL_KEY);
+const GOAL_API_KEY = cleanString(process.env.GOAL_API_KEY) || 
+  cleanString(process.env.NEXT_PUBLIC_GOAL_API_KEY) || 
+  cleanString(process.env.API_FOOTBALL_KEY) || 
+  cleanString(process.env.NEXT_PUBLIC_API_FOOTBALL_KEY);
+
 const SUPABASE_URL = cleanString(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = cleanString(process.env.SUPABASE_SERVICE_ROLE_KEY) || cleanString(process.env.SUPABASE_KEY);
 
-if (!API_FOOTBALL_KEY) {
-  console.error('❌ Missing API_FOOTBALL_KEY environment variable.');
+if (!GOAL_API_KEY) {
+  console.error('❌ Missing GOAL_API_KEY environment variable.');
 }
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -53,172 +57,265 @@ try {
   process.exit(1);
 }
 
-const LEAGUE_MAP = {
-  PL: 39,
-  LL: 140,
-  SA: 135,
-  BL: 78,
-  L1: 61,
-  UCL: 2
+const GOAL_API_BASE = 'https://api.goal-api.com/v1';
+
+const GOAL_LEAGUE_MAP = {
+  PL: { id: 'cmr77dvkr005nrx06lp7rvp49', name: 'Premier League' },
+  LL: { id: 'cmr77dvnt006nrx063v3w622e', name: 'La Liga' },
+  SA: { id: 'cmr77dvpd006yrx06zig7907g', name: 'Serie A' },
+  BL: { id: 'cmr77dvgm0002rx06rt2uqxii', name: 'Bundesliga' },
+  L1: { id: 'cmr77dvqg007crx06q1kaceyo', name: 'Ligue 1' },
+  UCL: { id: 'cmr77dw3900f5rx06j05wgzv4', name: 'UEFA Champions League' }
 };
 
-function formatDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function parseGoalStats(statisticsArray = []) {
+  const findStat = (typeName) => {
+    return statisticsArray.find(s => s.type?.toLowerCase() === typeName.toLowerCase());
+  };
+
+  const parseVal = (stat, side, fallback = 0) => {
+    if (!stat || stat[side] === null || stat[side] === undefined) return fallback;
+    const str = String(stat[side]).replace('%', '').trim();
+    const parsed = parseInt(str, 10);
+    return isNaN(parsed) ? fallback : parsed;
+  };
+
+  const possessionStat = findStat('Ball Possession') || findStat('Possession');
+  const shotsTotal = findStat('Shots Total') || findStat('Total Shots');
+  const shotsOnGoal = findStat('Shots On Goal') || findStat('On Target');
+  const corners = findStat('Corners') || findStat('Corner Kicks');
+  const fouls = findStat('Fouls');
+  const offsides = findStat('Offsides');
+  const yellowCards = findStat('Yellow Cards');
+  const redCards = findStat('Red Cards');
+  const saves = findStat('Saves') || findStat('Goalkeeper Saves');
+
+  return {
+    home: {
+      possession: parseVal(possessionStat, 'home', 50),
+      shots: parseVal(shotsTotal, 'home', 0),
+      shotsOnTarget: parseVal(shotsOnGoal, 'home', 0),
+      corners: parseVal(corners, 'home', 0),
+      fouls: parseVal(fouls, 'home', 0),
+      offsides: parseVal(offsides, 'home', 0),
+      yellowCards: parseVal(yellowCards, 'home', 0),
+      redCards: parseVal(redCards, 'home', 0),
+      saves: parseVal(saves, 'home', 0)
+    },
+    away: {
+      possession: parseVal(possessionStat, 'away', 50),
+      shots: parseVal(shotsTotal, 'away', 0),
+      shotsOnTarget: parseVal(shotsOnGoal, 'away', 0),
+      corners: parseVal(corners, 'away', 0),
+      fouls: parseVal(fouls, 'away', 0),
+      offsides: parseVal(offsides, 'away', 0),
+      yellowCards: parseVal(yellowCards, 'away', 0),
+      redCards: parseVal(redCards, 'away', 0),
+      saves: parseVal(saves, 'away', 0)
+    }
+  };
+}
+
+function parseGoalEvents(events = [], cards = [], substitutions = []) {
+  const result = [];
+
+  events.forEach((e, idx) => {
+    result.push({
+      id: e.id || `goal-${idx}`,
+      time: parseInt(e.time, 10) || 0,
+      type: 'goal',
+      teamId: e.homeScorer ? 'home' : 'away',
+      player: e.homeScorer || e.awayScorer || 'Bàn thắng',
+      assistPlayer: e.homeAssist || e.awayAssist || undefined,
+      detail: e.score || undefined
+    });
+  });
+
+  cards.forEach((c, idx) => {
+    const isYellow = (c.card || '').toLowerCase().includes('yellow');
+    result.push({
+      id: c.id || `card-${idx}`,
+      time: parseInt(c.time, 10) || 0,
+      type: isYellow ? 'yellow_card' : 'red_card',
+      teamId: c.homeFault ? 'home' : 'away',
+      player: c.homeFault || c.awayFault || 'Thẻ phạt'
+    });
+  });
+
+  substitutions.forEach((s, idx) => {
+    result.push({
+      id: s.id || `sub-${idx}`,
+      time: parseInt(s.time, 10) || 0,
+      type: 'substitution',
+      teamId: s.homePlayerIn ? 'home' : 'away',
+      player: s.homePlayerIn || s.awayPlayerIn || 'Vào sân',
+      assistPlayer: s.homePlayerOut || s.awayPlayerOut || undefined,
+      detail: 'Thay người'
+    });
+  });
+
+  return result.sort((a, b) => a.time - b.time);
+}
+
+async function fetchGoalDetails(id) {
+  try {
+    const res = await fetch(`${GOAL_API_BASE}/fixtures/${id}`, {
+      headers: { 'Authorization': `Bearer ${GOAL_API_KEY}` }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || null;
+    }
+  } catch (e) {
+    console.error(`Error fetching Goal API details for ${id}:`, e.message);
+  }
+  return null;
+}
+
+function mapFixture(f, leagueCode) {
+  const statusRaw = (f.matchStatus || '').toUpperCase();
+  let status = 'UPCOMING';
+  if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
+    status = 'LIVE';
+  } else if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
+    status = 'FINISHED';
+  } else if (['POSTPONED', 'PST'].includes(statusRaw)) {
+    status = 'POSTPONED';
+  } else if (['CANCELLED', 'CANC', 'ABD'].includes(statusRaw)) {
+    status = 'CANCELLED';
+  }
+
+  const hScore = parseInt(f.homeTeamScore ?? f.homeTeamFtScore ?? '0', 10) || 0;
+  const aScore = parseInt(f.awayTeamScore ?? f.awayTeamFtScore ?? '0', 10) || 0;
+
+  const stats = f.statistics && f.statistics.length > 0
+    ? parseGoalStats(f.statistics)
+    : {
+        home: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 },
+        away: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 }
+      };
+
+  const events = parseGoalEvents(f.events || [], f.cards || [], f.substitutions || []);
+  const kickoff = f.kickoffUtc || (f.matchDate ? `${f.matchDate}T${f.matchTime || '00:00'}:00.000Z` : new Date().toISOString());
+
+  return {
+    id: String(f.id || f.apiId),
+    league_id: leagueCode,
+    season: f.leagueYear || '2026/2027',
+    round: f.matchRound ? `Vòng ${f.matchRound}` : f.stageName || 'Vòng đấu',
+    status,
+    date: kickoff,
+    venue: f.matchStadium || '',
+    referee: f.matchReferee || '',
+    elapsed_time: parseInt(f.minute || '0', 10) || 0,
+    home_team_id: f.homeTeamId || 'home',
+    home_team_name: f.homeTeamName || f.homeTeam?.name || 'Home Team',
+    home_team_logo: f.teamHomeBadge || f.homeTeam?.badge || '',
+    away_team_id: f.awayTeamId || 'away',
+    away_team_name: f.awayTeamName || f.awayTeam?.name || 'Away Team',
+    away_team_logo: f.teamAwayBadge || f.awayTeam?.badge || '',
+    home_score: hScore,
+    away_score: aScore,
+    stats,
+    events,
+    updated_at: new Date().toISOString()
+  };
 }
 
 async function syncMatches() {
   const now = new Date();
-  const todayStr = formatDate(now);
-  console.log(`🚀 Starting Dynamic API-Football Sync Job at ${now.toISOString()} (Today: ${todayStr})...`);
+  console.log(`🚀 Starting Goal API Sync Job at ${now.toISOString()}...`);
 
-  const past3Days = new Date(now);
-  past3Days.setDate(now.getDate() - 3);
+  const headers = { 'Authorization': `Bearer ${GOAL_API_KEY}` };
+  const targetLeagues = Object.entries(GOAL_LEAGUE_MAP);
+  const targetLeagueIds = targetLeagues.map(([, obj]) => obj.id);
 
-  const future3Days = new Date(now);
-  future3Days.setDate(now.getDate() + 3);
+  let rawList = [];
 
-  const fromStr = formatDate(past3Days);
-  const toStr = formatDate(future3Days);
-
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-  const dynamicSeason = currentMonth >= 8 ? currentYear : currentYear - 1;
-
-  console.log(`📅 Dynamic Window: ${fromStr} -> ${toStr} (Dynamic Season: ${dynamicSeason})`);
-
-  const headers = {
-    'x-apisports-key': API_FOOTBALL_KEY,
-    'x-rapidapi-key': API_FOOTBALL_KEY
-  };
-
-  let allFixtures = [];
-  const targetLeagueIds = Object.values(LEAGUE_MAP);
-
-  // 0. Fetch LIVE matches worldwide first (Real-time in-play fixtures)
+  // 1. Fetch LIVE matches
   try {
-    const liveUrl = 'https://v3.football.api-sports.io/fixtures?live=all';
-    const liveRes = await fetch(liveUrl, { headers });
+    const liveRes = await fetch(`${GOAL_API_BASE}/fixtures/live`, { headers });
     if (liveRes.ok) {
-      const liveData = await liveRes.json();
-      if (liveData.response && Array.isArray(liveData.response)) {
-        const filteredLive = liveData.response.filter(item => targetLeagueIds.includes(item.league?.id));
-        console.log(`🔴 Found ${filteredLive.length} target league matches currently LIVE!`);
-        allFixtures.push(...filteredLive);
+      const liveJson = await liveRes.json();
+      if (Array.isArray(liveJson.data)) {
+        const liveFiltered = liveJson.data.filter(f => targetLeagueIds.includes(f.leagueId));
+        console.log(`🔴 Found ${liveFiltered.length} LIVE matches in target leagues!`);
+        for (const item of liveFiltered) {
+          const lEntry = targetLeagues.find(([, obj]) => obj.id === item.leagueId);
+          if (lEntry) {
+            const details = await fetchGoalDetails(item.id);
+            rawList.push(mapFixture(details || item, lEntry[0]));
+          }
+        }
       }
     }
   } catch (err) {
     console.error('Error fetching live matches:', err.message);
   }
 
-  // 1. Fetch Today's Matches worldwide
-  try {
-    const todayUrl = `https://v3.football.api-sports.io/fixtures?date=${todayStr}`;
-    const todayRes = await fetch(todayUrl, { headers });
-    if (todayRes.ok) {
-      const todayData = await todayRes.json();
-      if (todayData.response && Array.isArray(todayData.response)) {
-        const filteredToday = todayData.response.filter(item => targetLeagueIds.includes(item.league?.id));
-        console.log(`⚽ Found ${filteredToday.length} target league matches occurring today (${todayStr}).`);
-        allFixtures.push(...filteredToday);
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching today fixtures:', err.message);
-  }
-
-  // 2. Fetch matches for 6 main leagues
-  const topLeagues = [39, 140, 135, 78, 61, 2];
-  for (const lId of topLeagues) {
+  // 2. Fetch Results & Upcoming matches for target 6 leagues
+  for (const [code, leagueObj] of targetLeagues) {
     try {
-      const leagueUrl = `https://v3.football.api-sports.io/fixtures?league=${lId}&season=${dynamicSeason}&from=${fromStr}&to=${toStr}`;
-      const res = await fetch(leagueUrl, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.response && Array.isArray(data.response) && data.response.length > 0) {
-          console.log(`🏆 Found ${data.response.length} matches for league ${lId} in range ${fromStr} to ${toStr}.`);
-          allFixtures.push(...data.response);
+      const [resResults, resSched] = await Promise.all([
+        fetch(`${GOAL_API_BASE}/results/league/${leagueObj.id}?limit=8`, { headers }),
+        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${leagueObj.id}&status=SCHEDULED&limit=5`, { headers })
+      ]);
+
+      if (resResults.ok) {
+        const resJson = await resResults.json();
+        if (Array.isArray(resJson.data)) {
+          console.log(`🏆 [${code}] Retrieved ${resJson.data.length} recent results.`);
+          for (let i = 0; i < resJson.data.length; i++) {
+            const item = resJson.data[i];
+            if (i < 2) {
+              // Fetch full statistics & events for the 2 latest completed matches
+              const details = await fetchGoalDetails(item.id);
+              rawList.push(mapFixture(details || item, code));
+            } else {
+              rawList.push(mapFixture(item, code));
+            }
+          }
+        }
+      }
+
+      if (resSched.ok) {
+        const schedJson = await resSched.json();
+        if (Array.isArray(schedJson.data)) {
+          console.log(`📅 [${code}] Retrieved ${schedJson.data.length} scheduled matches.`);
+          schedJson.data.forEach(item => {
+            rawList.push(mapFixture(item, code));
+          });
         }
       }
     } catch (e) {
-      console.error(`Error fetching league ${lId} range:`, e.message);
+      console.error(`Error fetching league ${code}:`, e.message);
     }
   }
 
-  if (allFixtures.length === 0) {
-    console.log('⚠️ No fixtures retrieved. Job completed gracefully.');
+  if (rawList.length === 0) {
+    console.log('⚠️ No fixtures retrieved from Goal API.');
     return;
   }
 
+  // Deduplicate matches
   const uniqueMap = new Map();
-  for (const item of allFixtures) {
-    if (item.fixture?.id) {
-      uniqueMap.set(item.fixture.id, item);
+  for (const m of rawList) {
+    if (m.id) {
+      uniqueMap.set(m.id, m);
     }
   }
-  const uniqueFixtures = Array.from(uniqueMap.values());
-  console.log(`📦 Deduplicated ${uniqueFixtures.length} total dynamic matches to insert into Supabase.`);
-
-  const rows = uniqueFixtures.map(item => {
-    const statusShort = item.fixture?.status?.short || 'NS';
-    let status = 'UPCOMING';
-    if (['1H', '2H', 'HT', 'ET', 'P', 'BT', 'LIVE', 'IN_PLAY'].includes(statusShort)) status = 'LIVE';
-    else if (['FT', 'AET', 'PEN'].includes(statusShort)) status = 'FINISHED';
-
-    if (status === 'LIVE' && item.fixture?.date) {
-      const startTime = new Date(item.fixture.date).getTime();
-      if (!isNaN(startTime) && (Date.now() - startTime) > 3 * 60 * 60 * 1000) {
-        status = 'FINISHED';
-      }
-    }
-
-    const leagueCode = Object.keys(LEAGUE_MAP).find(k => LEAGUE_MAP[k] === item.league?.id) || 'PL';
-    const hScore = item.goals?.home ?? 0;
-    const aScore = item.goals?.away ?? 0;
-
-    const events = (item.events || []).map((e, idx) => ({
-      id: `ev-${item.fixture?.id}-${idx}`,
-      time: e.time?.elapsed || 0,
-      teamId: e.team?.id?.toString() || '',
-      player: e.player?.name || 'Player',
-      type: e.type === 'Goal' ? 'goal' : e.detail?.includes('Yellow') ? 'yellow_card' : e.detail?.includes('Red') ? 'red_card' : 'sub'
-    }));
-
-    return {
-      id: item.fixture?.id?.toString(),
-      league_id: leagueCode,
-      season: item.league?.season?.toString() || `${dynamicSeason}/${(dynamicSeason + 1).toString().slice(-2)}`,
-      round: item.league?.round || 'Regular Season',
-      status: status,
-      date: item.fixture?.date || new Date().toISOString(),
-      venue: item.fixture?.venue?.name || '',
-      referee: item.fixture?.referee || '',
-      elapsed_time: item.fixture?.status?.elapsed || 0,
-      home_team_id: item.teams?.home?.id?.toString() || '',
-      home_team_name: item.teams?.name || item.teams?.home?.name || '',
-      home_team_logo: item.teams?.home?.logo || '',
-      away_team_id: item.teams?.away?.id?.toString() || '',
-      away_team_name: item.teams?.away?.name || '',
-      away_team_logo: item.teams?.away?.logo || '',
-      home_score: hScore,
-      away_score: aScore,
-      stats: item.statistics || {},
-      events: events,
-      updated_at: new Date().toISOString()
-    };
-  });
+  const rows = Array.from(uniqueMap.values());
+  console.log(`📦 Upserting ${rows.length} unique matches into Supabase Database...`);
 
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('matches')
       .upsert(rows, { onConflict: 'id' });
 
     if (error) {
       console.error('❌ Supabase upsert error:', error.message);
     } else {
-      console.log(`✅ Successfully upserted ${rows.length} dynamic matches into Supabase Database!`);
+      console.log(`✅ Successfully upserted ${rows.length} matches into Supabase Database!`);
     }
   } catch (err) {
     console.error('❌ Database connection exception:', err.message);
@@ -227,10 +324,10 @@ async function syncMatches() {
 
 syncMatches()
   .then(() => {
-    console.log('🎉 Dynamic sync process completed successfully.');
+    console.log('🎉 Goal API Sync Job finished successfully.');
     process.exit(0);
   })
-  .catch(e => {
-    console.error('Dynamic sync process exception:', e);
-    process.exit(0);
+  .catch(err => {
+    console.error('Sync process exception:', err);
+    process.exit(1);
   });
