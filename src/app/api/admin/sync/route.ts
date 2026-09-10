@@ -53,17 +53,17 @@ async function performSync(apiKey?: string) {
   for (const [leagueCode, leagueObj] of targetLeagues) {
     try {
       const [resResults, resSched] = await Promise.all([
-        fetch(`${GOAL_API_BASE}/results/league/${leagueObj.id}?limit=8`, { headers, cache: 'no-store' }),
-        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${leagueObj.id}&status=SCHEDULED&limit=5`, { headers, cache: 'no-store' })
+        fetch(`${GOAL_API_BASE}/results/league/${leagueObj.id}?limit=15`, { headers, cache: 'no-store' }),
+        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${leagueObj.id}&status=SCHEDULED&limit=10`, { headers, cache: 'no-store' })
       ]);
 
       if (resResults.ok) {
         const resJson = await resResults.json();
         if (Array.isArray(resJson.data)) {
-          // For the most recent 2 finished matches of each league, fetch full match details with stats
+          // For the most recent 4 finished matches of each league, fetch full match details with stats
           for (let i = 0; i < resJson.data.length; i++) {
             const raw = resJson.data[i];
-            if (i < 2) {
+            if (i < 4) {
               const details = await fetchGoalFixtureDetails(raw.id, keyToUse);
               fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
             } else {
