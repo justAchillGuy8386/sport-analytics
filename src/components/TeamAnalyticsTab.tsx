@@ -31,7 +31,7 @@ export const TeamAnalyticsTab: React.FC = () => {
     return (
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-3">
         <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
-        <p className="text-sm font-medium">Hiện chưa có dữ liệu đội bóng từ API-Football.</p>
+        <p className="text-sm font-medium">Hiện chưa có dữ liệu đội bóng từ Goal API.</p>
         <p className="text-xs text-slate-500">Vui lòng chờ API tải danh sách trận đấu thực tế hoặc chọn giải đấu khác.</p>
       </div>
     );
@@ -118,7 +118,7 @@ export const TeamAnalyticsTab: React.FC = () => {
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
           <span className="text-xs text-slate-400 block mb-1">Nguồn Dữ Liệu</span>
-          <div className="text-xs font-mono font-bold text-emerald-400 mt-2">🟢 API-Football Real</div>
+          <div className="text-xs font-mono font-bold text-emerald-400 mt-2">🟢 Goal API Real</div>
         </div>
       </div>
 
@@ -176,7 +176,7 @@ export const TeamAnalyticsTab: React.FC = () => {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500 font-mono">
-            Data Source: API-Football Real Matches
+            Data Source: Goal API Real Matches
           </div>
         </div>
       </div>

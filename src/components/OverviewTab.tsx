@@ -72,7 +72,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </div>
             </div>
 
-            <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">API-Football Real-time Sync</span>
+            <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">Goal API Real-time Sync</span>
           </div>
 
           {/* Grid of multiple LIVE matches */}

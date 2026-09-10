@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Football Analytics Platform | Mùa Giải 2026/27',
   description: 'Nền tảng phân tích dữ liệu bóng đá 6 giải đấu hàng đầu châu Âu mùa 2026/27. Standings, Team Analytics, Match Center, Máy tính Kèo Châu Á & Smart Polling Pipeline.',
-  keywords: ['Football Analytics', 'Premier League 2026/27', 'La Liga', 'UEFA Champions League', 'Asian Handicap Settlement', 'API-Football'],
+  keywords: ['Football Analytics', 'Premier League 2026/27', 'La Liga', 'UEFA Champions League', 'Asian Handicap Settlement', 'Goal API'],
 };
 
 export default function RootLayout({
@@ -55,7 +55,7 @@ export default function RootLayout({
                     <span>•</span>
                     <span>Tailwind CSS</span>
                     <span>•</span>
-                    <span>API-Football Integration</span>
+                    <span>Goal API Integration</span>
                   </div>
                 </div>
               </footer>

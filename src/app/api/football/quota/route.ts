@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { fetchApiQuotaStatus, getGlobalQuotaStatus } from '@/services/apiFootball';
+import { fetchApiQuotaStatus, getGlobalQuotaStatus, getGoalApiKey } from '@/services/goalApi';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const userApiKey = searchParams.get('apiKey') || process.env.API_FOOTBALL_KEY || process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '';
+  const userApiKey = searchParams.get('apiKey') || getGoalApiKey();
 
   try {
     const quotaInfo = await fetchApiQuotaStatus(userApiKey);
@@ -11,17 +11,17 @@ export async function GET(request: Request) {
       return NextResponse.json({
         success: true,
         current: quotaInfo.current,
-        limit: quotaInfo.limit
+        limit: quotaInfo.limit || 1000
       });
     }
   } catch (error: any) {
-    console.error('Quota API route error:', error);
+    console.error('Goal API Quota route error:', error);
   }
 
   const globalStatus = getGlobalQuotaStatus();
   return NextResponse.json({
     success: true,
     current: globalStatus.current,
-    limit: globalStatus.limit
+    limit: globalStatus.limit || 1000
   });
 }

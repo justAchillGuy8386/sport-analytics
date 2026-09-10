@@ -19,15 +19,16 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string>('');
 
-  const remainingQuota = 100 - quotaUsed;
+  const MAX_QUOTA = 1000;
+  const remainingQuota = Math.max(0, MAX_QUOTA - quotaUsed);
 
   const handleTriggerETL = async () => {
-    if (quotaUsed >= 100) return;
+    if (quotaUsed >= MAX_QUOTA) return;
     setIsExecuting(true);
     setSyncStatusMsg('');
 
     try {
-      // Call admin sync endpoint to fetch fresh matches from API-Football & save straight to Supabase DB
+      // Call admin sync endpoint to fetch fresh matches from Goal API & save straight to Supabase DB
       const res = await fetch('/api/admin/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,10 +43,10 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
           timestamp: new Date().toISOString(),
           trigger: 'Manual',
           requestsUsed: quotaUsed,
-          requestsRemaining: Math.max(0, 100 - quotaUsed),
+          requestsRemaining: Math.max(0, MAX_QUOTA - quotaUsed),
           activeLiveMatches: 0,
           status: 'Success',
-          details: data.message || 'Đã nạp dữ liệu từ API-Football trực tiếp vào Supabase Database.'
+          details: data.message || 'Đã nạp dữ liệu từ Goal API trực tiếp vào Supabase Database.'
         };
         setLogs([newLog, ...logs]);
       } else {
@@ -80,11 +81,11 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Activity className="w-4 h-4 text-emerald-400" />
-                <span>API Quota Guard (100 Requests/Ngày)</span>
+                <span>Goal API Quota (1.000 Requests/Ngày)</span>
               </h3>
               <button 
                 onClick={() => refreshQuota()} 
-                title="Làm mới Quota thực tế từ database"
+                title="Làm mới Quota thực tế từ Goal API"
                 className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1 hover:bg-emerald-500/20 transition-all cursor-pointer"
               >
                 <RefreshCw className="w-3 h-3 animate-spin-slow" /> Đồng bộ API
@@ -93,8 +94,8 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
 
             <div className="my-4">
               <div className="flex justify-between items-baseline mb-2">
-                <span className="text-3xl font-black text-white font-mono">{quotaUsed} <span className="text-sm text-slate-400 font-normal">/ 100 req</span></span>
-                <span className={`text-xs font-mono font-bold ${remainingQuota < 10 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                <span className="text-3xl font-black text-white font-mono">{quotaUsed} <span className="text-sm text-slate-400 font-normal">/ 1.000 req</span></span>
+                <span className={`text-xs font-mono font-bold ${remainingQuota < 100 ? 'text-amber-400' : 'text-emerald-400'}`}>
                   Còn lại: {remainingQuota} req
                 </span>
               </div>
@@ -102,15 +103,15 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
               <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    quotaUsed >= 90 ? 'bg-amber-400' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                    quotaUsed >= 900 ? 'bg-amber-400' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
                   }`}
-                  style={{ width: `${quotaUsed}%` }}
+                  style={{ width: `${Math.min(100, (quotaUsed / MAX_QUOTA) * 100)}%` }}
                 ></div>
               </div>
             </div>
 
             <p className="text-xs text-slate-400">
-              Dữ liệu Quota được đọc trực tiếp từ HTTP Response Headers &amp; endpoint <code>/status</code> thực tế của API-Football.
+              Dữ liệu Quota được đọc trực tiếp từ HTTP Response Headers (<code>x-ratelimit-remaining</code>) thực tế của Goal API.
             </p>
           </div>
 
@@ -123,7 +124,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
 
           <button
             onClick={handleTriggerETL}
-            disabled={isExecuting || quotaUsed >= 100}
+            disabled={isExecuting || quotaUsed >= MAX_QUOTA}
             className={`mt-4 w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
               isExecuting
                 ? 'bg-slate-800 text-slate-400 cursor-not-allowed'
@@ -133,7 +134,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             {isExecuting ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                <span>Đang nạp dữ liệu từ API-Football vào Supabase DB...</span>
+                <span>Đang nạp dữ liệu từ Goal API vào Supabase DB...</span>
               </>
             ) : (
               <>
@@ -234,7 +235,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
                     <td className="py-3 px-4 text-emerald-400 font-bold">{log.id}</td>
                     <td className="py-3 px-4 text-slate-300 text-[11px]">{new Date(log.timestamp).toLocaleTimeString()}</td>
                     <td className="py-3 px-3 text-slate-300">{log.trigger}</td>
-                    <td className="py-3 px-3 text-center text-amber-400 font-bold">{quotaUsed}/100</td>
+                    <td className="py-3 px-3 text-center text-amber-400 font-bold">{quotaUsed}/1.000</td>
                     <td className="py-3 px-3 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         log.status === 'Success'

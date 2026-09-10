@@ -293,7 +293,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500 font-mono text-center">
-            Events Data Source: API-Football Live Feeds
+            Events Data Source: Goal API Live Feeds
           </div>
         </div>
       </div>

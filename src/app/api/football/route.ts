@@ -10,6 +10,7 @@ export async function GET(request: Request) {
 
   try {
     // Read 100% directly from Supabase Database (0 API-Football requests consumed)
+    // Read 100% directly from Supabase Database (0 Goal API requests consumed)
     const dbMatches = await getMatchesFromSupabase(leagueCode);
 
     return NextResponse.json({
