@@ -175,10 +175,10 @@ async function fetchGoalDetails(id) {
 function mapFixture(f, leagueCode) {
   const statusRaw = (f.matchStatus || '').toUpperCase();
   let status = 'UPCOMING';
-  if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
-    status = 'LIVE';
-  } else if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
+  if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
     status = 'FINISHED';
+  } else if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
+    status = 'LIVE';
   } else if (['POSTPONED', 'PST'].includes(statusRaw)) {
     status = 'POSTPONED';
   } else if (['CANCELLED', 'CANC', 'ABD'].includes(statusRaw)) {
@@ -257,8 +257,8 @@ async function syncMatches() {
   for (const [code, leagueObj] of targetLeagues) {
     try {
       const [resResults, resSched] = await Promise.all([
-        fetch(`${GOAL_API_BASE}/results/league/${leagueObj.id}?limit=8`, { headers }),
-        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${leagueObj.id}&status=SCHEDULED&limit=5`, { headers })
+        fetch(`${GOAL_API_BASE}/results/league/${leagueObj.id}?limit=15`, { headers }),
+        fetch(`${GOAL_API_BASE}/fixtures?leagueId=${leagueObj.id}&status=SCHEDULED&limit=10`, { headers })
       ]);
 
       if (resResults.ok) {
@@ -267,8 +267,8 @@ async function syncMatches() {
           console.log(`🏆 [${code}] Retrieved ${resJson.data.length} recent results.`);
           for (let i = 0; i < resJson.data.length; i++) {
             const item = resJson.data[i];
-            if (i < 2) {
-              // Fetch full statistics & events for the 2 latest completed matches
+            if (i < 4) {
+              // Fetch full statistics & events for the 4 latest completed matches
               const details = await fetchGoalDetails(item.id);
               rawList.push(mapFixture(details || item, code));
             } else {
