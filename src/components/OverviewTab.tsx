@@ -3,6 +3,7 @@
 import React from 'react';
 import { Match, LeagueCode } from '@/types/football';
 import { calculateKPIMetrics } from '@/utils/analyticsCalculations';
+import { getLiveMinute } from '@/utils/matchTime';
 import { COMPETITIONS } from '@/constants/competitions';
 import { TeamLogo } from '@/components/TeamLogo';
 import { 
@@ -55,7 +56,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     <div className="space-y-6">
       {/* Live Matches Ticker Banner */}
       {liveMatches.length > 0 ? (
-        <div className="bg-gradient-to-r from-red-950/60 via-slate-900 to-slate-900 border border-red-500/30 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden space-y-4">
+        <div className="bg-gradient-to-r from-red-950/60 via-slate-900 to-slate-900 border border-red-500/30 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden space-y-4 animate-fade-in-up">
           <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>
           
           <div className="flex items-center justify-between border-b border-red-500/20 pb-3">
@@ -87,8 +88,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <span className="bg-slate-900 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-800">
                     {liveMatch.leagueId} • {liveMatch.round}
                   </span>
-                  <span className="text-red-400 font-semibold text-[11px] animate-pulse">
-                    Phút {liveMatch.elapsedTime}'
+                  <span className="text-red-400 font-bold text-xs animate-pulse font-mono">
+                    {getLiveMinute(liveMatch)}
                   </span>
                 </div>
 
@@ -118,7 +119,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
         </div>
       ) : (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300">
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300 animate-fade-in-up">
           <div className="flex items-center gap-2.5">
             <Info className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
@@ -134,7 +135,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       )}
 
       {/* KPI Cards Grid */}
-      <div className="space-y-3">
+      <div className="space-y-3 animate-fade-in-up animation-delay-100">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-800/80 pb-2">
           <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-400" />
@@ -277,7 +278,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </div>
 
       {/* Analytics Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up animation-delay-200">
         {/* Chart 1: Avg Goals & Over 2.5 Comparison */}
         <div className="bg-slate-900/80 border border-slate-800 p-4 sm:p-5 rounded-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">

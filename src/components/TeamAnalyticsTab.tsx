@@ -59,7 +59,7 @@ export const TeamAnalyticsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Team Selection Header */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 shadow-inner flex items-center justify-center">
             <TeamLogo logo={team.logo} name={team.name} className="w-10 h-10" />
@@ -95,7 +95,7 @@ export const TeamAnalyticsTab: React.FC = () => {
       </div>
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in-up animation-delay-100">
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
           <span className="text-xs text-slate-400 block mb-1">Tổng Số Trận Thống Kê</span>
           <div className="text-2xl font-black text-amber-400">{teamMatches.length} trận</div>
@@ -109,11 +109,9 @@ export const TeamAnalyticsTab: React.FC = () => {
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
-          <span className="text-xs text-slate-400 block mb-1">Tổng Bàn Ghi Được</span>
-          <div className="text-2xl font-black text-cyan-400">
-            {homeGoalsScored + awayGoalsScored} bàn
-          </div>
-          <span className="text-[11px] text-slate-500">{homeGoalsScored} nhà / {awayGoalsScored} khách</span>
+          <span className="text-xs text-slate-400 block mb-1">Bàn Thắng Ghi Được</span>
+          <div className="text-2xl font-black text-cyan-400">{homeGoalsScored + awayGoalsScored} bàn</div>
+          <span className="text-[11px] text-slate-500">Tổng cả sân nhà &amp; khách</span>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
@@ -123,7 +121,7 @@ export const TeamAnalyticsTab: React.FC = () => {
       </div>
 
       {/* Home vs Away Analysis Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up animation-delay-200">
         <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
             <Home className="w-4 h-4 text-blue-400" />

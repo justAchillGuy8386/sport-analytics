@@ -58,7 +58,7 @@ export const BettingAnalyticsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 animate-fade-in-up">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-emerald-400">
             <Calculator className="w-6 h-6" />
@@ -73,7 +73,7 @@ export const BettingAnalyticsTab: React.FC = () => {
       </div>
 
       {/* Asian Handicap Interactive Calculator Card */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up animation-delay-100">
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -260,7 +260,7 @@ export const BettingAnalyticsTab: React.FC = () => {
 
       {/* Line Movement Tracker */}
       {oddsHistoryData.length > 0 && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 animate-fade-in-up animation-delay-200">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
             <ArrowRightLeft className="w-4 h-4 text-emerald-400" />
             <span>Theo Dõi Biến Động Odds Trước Trận (Odds Line Movement Tracker)</span>

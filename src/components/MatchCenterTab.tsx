@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Match } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
+import { getLiveMinute } from '@/utils/matchTime';
 import { Swords, Clock, MapPin, User, Activity, AlertCircle } from 'lucide-react';
 
 interface MatchCenterTabProps {
@@ -67,7 +68,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
   return (
     <div className="space-y-6">
       {/* Match Selector Strip */}
-      <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2 border-b border-slate-800">
+      <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2 border-b border-slate-800 animate-fade-in-up">
         {matchDataList.map(m => (
           <button
             key={m.id}
@@ -84,14 +85,14 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
               m.status === 'LIVE' ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-800 text-slate-300'
             }`}>
-              {m.status === 'LIVE' ? `${m.elapsedTime}'` : m.status}
+              {m.status === 'LIVE' ? getLiveMinute(m) : m.status}
             </span>
           </button>
         ))}
       </div>
 
       {/* Match Header Scoreboard */}
-      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden animate-fade-in-up animation-delay-100">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 mb-4 sm:mb-6 border-b border-slate-800/80 pb-3 gap-2">
           <div className="flex items-center gap-2">
             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded font-bold font-mono text-[11px]">
@@ -144,7 +145,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
               {activeMatch.status === 'LIVE' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] sm:text-xs font-bold animate-pulse">
                   <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  LIVE • Phút {activeMatch.elapsedTime}'
+                  LIVE • {getLiveMinute(activeMatch)}
                 </span>
               ) : activeMatch.status === 'FINISHED' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] sm:text-xs font-medium">
@@ -170,7 +171,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up animation-delay-200">
         {/* Match Statistics Progress Bars */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">

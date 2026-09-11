@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ETLRunLog } from '@/types/football';
 import { useFootball } from '@/context/FootballContext';
-import { Database, Activity, RefreshCw, Cpu, Server, Terminal, Sparkles } from 'lucide-react';
+import { Database, Activity, Play, RefreshCw, Cpu, Server, Terminal, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface ETLQuotaMonitorTabProps {
   quotaUsed: number;
@@ -14,11 +14,52 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
   quotaUsed,
   setQuotaUsed
 }) => {
-  const { refreshQuota } = useFootball();
-  const [logs] = useState<ETLRunLog[]>([]);
+  const { refreshQuota, apiKey } = useFootball();
+  const [logs, setLogs] = useState<ETLRunLog[]>([]);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string>('');
 
   const MAX_QUOTA = 1000;
   const remainingQuota = Math.max(0, MAX_QUOTA - quotaUsed);
+
+  const handleTriggerETL = async () => {
+    if (quotaUsed >= MAX_QUOTA) return;
+    setIsExecuting(true);
+    setSyncStatusMsg('');
+
+    try {
+      // Call admin sync endpoint to fetch fresh matches from Goal API & save straight to Supabase DB
+      const res = await fetch('/api/admin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setSyncStatusMsg(data.message || 'Đã nạp sạch dữ liệu mới vào Supabase DB!');
+        const newLog: ETLRunLog = {
+          id: `sync-${101 + logs.length}`,
+          timestamp: new Date().toISOString(),
+          trigger: 'Manual',
+          requestsUsed: quotaUsed,
+          requestsRemaining: Math.max(0, MAX_QUOTA - quotaUsed),
+          activeLiveMatches: 0,
+          status: 'Success',
+          details: data.message || 'Đã nạp dữ liệu từ Goal API trực tiếp vào Supabase Database.'
+        };
+        setLogs([newLog, ...logs]);
+      } else {
+        setSyncStatusMsg(`❌ Lỗi: ${data.message || data.error}`);
+      }
+      await refreshQuota();
+    } catch (e: any) {
+      console.error(e);
+      setSyncStatusMsg(`❌ Lỗi đồng bộ: ${e.message}`);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
 
   const SQL_VIEWS = [
     { name: 'vw_competition_summary', desc: 'Tổng hợp chỉ số bàn thắng, góc, thẻ theo từng giải đấu.' },
@@ -33,7 +74,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
   return (
     <div className="space-y-6">
       {/* Quota Header & Smart Polling State Machine */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
         {/* Gauge Card */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
           <div>
@@ -74,6 +115,34 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
             </p>
           </div>
 
+          {syncStatusMsg && (
+            <div className="mt-3 p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{syncStatusMsg}</span>
+            </div>
+          )}
+
+          <button
+            onClick={handleTriggerETL}
+            disabled={isExecuting || quotaUsed >= MAX_QUOTA}
+            className={`mt-4 w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+              isExecuting
+                ? 'bg-slate-800 text-slate-400 cursor-not-allowed'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20'
+            }`}
+          >
+            {isExecuting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+                <span>Đang nạp dữ liệu từ Goal API vào Supabase DB...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-slate-950" />
+                <span>⚡ Nạp Trận Đấu Mới Vào Supabase DB</span>
+              </>
+            )}
+          </button>
           <div className="mt-4 p-2.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center gap-2 text-xs text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>Đồng bộ tự động qua Cron-Job (1 phút đêm / 2 tiếng ngày)</span>
@@ -121,7 +190,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
       </div>
 
       {/* SQL Analytics Views Catalog */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 animate-fade-in-up animation-delay-150">
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
           <Server className="w-4 h-4 text-purple-400" />
           <span>Danh Sách SQL Analytics Views Trong Hệ Thống (Section 17)</span>
@@ -138,7 +207,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
       </div>
 
       {/* ETL Run Logs Table */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl animate-fade-in-up animation-delay-250">
         <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Database className="w-4 h-4 text-emerald-400" />

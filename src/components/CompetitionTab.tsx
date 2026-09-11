@@ -124,7 +124,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
       </div>
 
       {/* Header Info */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="text-3xl sm:text-4xl p-2.5 sm:p-3 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
             {competition.flag}
@@ -159,7 +159,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up animation-delay-150">
         {/* Main Standings Table (2 cols) */}
         <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
