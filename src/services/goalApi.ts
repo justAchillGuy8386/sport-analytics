@@ -1,4 +1,5 @@
 import { Match, StandingItem, LeagueCode, MatchEvent, TeamStatistics, MatchStatus } from '@/types/football';
+import { calculateLiveElapsedNumber } from '@/utils/matchTime';
 
 const GOAL_API_BASE = 'https://api.goal-api.com/v1';
 
@@ -280,7 +281,10 @@ export function mapGoalFixtureToMatch(f: any, leagueCode: LeagueCode): Match {
     date: kickoff,
     venue: f.matchStadium || '',
     referee: f.matchReferee || '',
-    elapsedTime: parseInt(f.minute || '0', 10) || 0,
+    elapsedTime: (() => {
+      const rawMin = parseInt(f.minute || f.liveMinute || f.matchMinute || f.elapsedTime || f.elapsed || '0', 10) || 0;
+      return (status === 'LIVE' && rawMin === 0) ? calculateLiveElapsedNumber(kickoff) : rawMin;
+    })(),
     homeTeam: {
       id: f.homeTeamId || 'home',
       name: f.homeTeamName || f.homeTeam?.name || 'Home Team',

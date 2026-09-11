@@ -1,6 +1,7 @@
 
 import { Match, LeagueCode, MatchStatus, TeamStatistics } from '@/types/football';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
+import { calculateLiveElapsedNumber } from '@/utils/matchTime';
 
 /**
  * Normalize raw status string from DB/API to system MatchStatus.
@@ -190,7 +191,9 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
         homeScore: hScore,
         awayScore: aScore,
         status: normalizeMatchStatus(row.status, row.date),
-        elapsedTime: row.elapsed_time ?? 0,
+        elapsedTime: normalizeMatchStatus(row.status, row.date) === 'LIVE'
+          ? calculateLiveElapsedNumber(row.date, row.elapsed_time ?? 0)
+          : (row.elapsed_time ?? 0),
         date: row.date,
         venue: row.venue || '',
         referee: row.referee || '',
