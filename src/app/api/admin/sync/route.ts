@@ -59,15 +59,44 @@ async function performSync(apiKey?: string) {
 
       if (resResults.ok) {
         const resJson = await resResults.json();
-        if (Array.isArray(resJson.data)) {
-          // For the most recent 4 finished matches of each league, fetch full match details with stats
+        if (Array.isArray(resJson.data) && resJson.data.length > 0) {
+          const resultIds = resJson.data.map((r: any) => String(r.id)).filter(Boolean);
+          const { data: existingInDb } = await adminClient
+            .from('matches')
+            .select('id, stats, events')
+            .in('id', resultIds);
+
+          const existingMap = new Map<string, any>();
+          if (Array.isArray(existingInDb)) {
+            existingInDb.forEach((item: any) => existingMap.set(String(item.id), item));
+          }
+
           for (let i = 0; i < resJson.data.length; i++) {
             const raw = resJson.data[i];
-            if (i < 4) {
-              const details = await fetchGoalFixtureDetails(raw.id, keyToUse);
-              fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
+            const existing = existingMap.get(String(raw.id));
+            const hasDetailedStats = existing && (
+              (existing.events && existing.events.length > 0) ||
+              (existing.stats?.home?.shots > 0 || existing.stats?.away?.shots > 0 ||
+               existing.stats?.home?.corners > 0 || existing.stats?.away?.corners > 0)
+            );
+
+            if (i < 3) {
+              if (hasDetailedStats) {
+                const mapped = mapGoalFixtureToMatch(raw, leagueCode);
+                mapped.stats = existing.stats;
+                mapped.events = existing.events;
+                fetchedMatches.push(mapped);
+              } else {
+                const details = await fetchGoalFixtureDetails(raw.id, keyToUse);
+                fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
+              }
             } else {
-              fetchedMatches.push(mapGoalFixtureToMatch(raw, leagueCode));
+              const mapped = mapGoalFixtureToMatch(raw, leagueCode);
+              if (hasDetailedStats) {
+                mapped.stats = existing.stats;
+                mapped.events = existing.events;
+              }
+              fetchedMatches.push(mapped);
             }
           }
         }
