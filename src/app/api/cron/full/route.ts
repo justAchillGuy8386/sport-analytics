@@ -4,7 +4,8 @@ import {
   GOAL_LEAGUE_MAP, 
   getGoalApiKey, 
   mapGoalFixtureToMatch, 
-  fetchGoalFixtureDetails 
+  fetchGoalFixtureDetails,
+  updateQuotaFromHeaders
 } from '@/services/goalApi';
 import { LeagueCode } from '@/types/football';
 
@@ -57,6 +58,8 @@ async function handleFullSync(request: Request) {
   try {
     const liveRes = await fetch(`${GOAL_API_BASE}/fixtures/live`, { headers, cache: 'no-store' });
     requestsCount++;
+    updateQuotaFromHeaders(liveRes);
+
     if (liveRes.ok) {
       const liveJson = await liveRes.json();
       if (Array.isArray(liveJson.data)) {
@@ -68,6 +71,8 @@ async function handleFullSync(request: Request) {
           }
         }
       }
+    } else if (liveRes.status === 429) {
+      console.warn('⚠️ Goal API Rate Limit reached during live fetch in full sync.');
     }
   } catch (err: any) {
     console.error('Error fetching live matches:', err.message);
@@ -81,19 +86,54 @@ async function handleFullSync(request: Request) {
         fetch(`${GOAL_API_BASE}/fixtures?leagueId=${leagueObj.id}&status=SCHEDULED&limit=10`, { headers, cache: 'no-store' })
       ]);
       requestsCount += 2;
+      updateQuotaFromHeaders(resResults);
+      updateQuotaFromHeaders(resSched);
 
       if (resResults.ok) {
         const resJson = await resResults.json();
-        if (Array.isArray(resJson.data)) {
+        if (Array.isArray(resJson.data) && resJson.data.length > 0) {
+          // Smart Cache: Check existing matches in DB to avoid refetching details
+          const resultIds = resJson.data.map((r: any) => String(r.id)).filter(Boolean);
+          const { data: existingInDb } = await adminClient
+            .from('matches')
+            .select('id, stats, events')
+            .in('id', resultIds);
+
+          const existingMap = new Map<string, any>();
+          if (Array.isArray(existingInDb)) {
+            existingInDb.forEach((item: any) => existingMap.set(String(item.id), item));
+          }
+
           for (let i = 0; i < resJson.data.length; i++) {
             const raw = resJson.data[i];
+            const existing = existingMap.get(String(raw.id));
+            const hasDetailedStats = existing && (
+              (existing.events && existing.events.length > 0) ||
+              (existing.stats?.home?.shots > 0 || existing.stats?.away?.shots > 0 ||
+               existing.stats?.home?.corners > 0 || existing.stats?.away?.corners > 0)
+            );
+
             if (i < 3) {
-              // Fetch full match statistics & events for the 3 latest completed matches
-              const details = await fetchGoalFixtureDetails(raw.id, apiKey);
-              requestsCount++;
-              fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
+              if (hasDetailedStats) {
+                // Already has full stats & events in DB - preserve them and save 1 API call!
+                const mapped = mapGoalFixtureToMatch(raw, leagueCode);
+                mapped.stats = existing.stats;
+                mapped.events = existing.events;
+                fetchedMatches.push(mapped);
+              } else {
+                // Fetch full match statistics & events for recently completed match
+                const details = await fetchGoalFixtureDetails(raw.id, apiKey);
+                requestsCount++;
+                fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
+              }
             } else {
-              fetchedMatches.push(mapGoalFixtureToMatch(raw, leagueCode));
+              // For matches beyond top 3: preserve details if they were fetched previously
+              const mapped = mapGoalFixtureToMatch(raw, leagueCode);
+              if (hasDetailedStats) {
+                mapped.stats = existing.stats;
+                mapped.events = existing.events;
+              }
+              fetchedMatches.push(mapped);
             }
           }
         }

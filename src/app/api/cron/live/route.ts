@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
-import { GOAL_LEAGUE_MAP, getGoalApiKey, mapGoalFixtureToMatch } from '@/services/goalApi';
+import { GOAL_LEAGUE_MAP, getGoalApiKey, mapGoalFixtureToMatch, updateQuotaFromHeaders } from '@/services/goalApi';
 import { LeagueCode } from '@/types/football';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +50,17 @@ async function handleLiveSync(request: Request) {
       cache: 'no-store' 
     });
 
+    updateQuotaFromHeaders(liveRes);
+
     if (!liveRes.ok) {
+      if (liveRes.status === 429) {
+        console.warn('⚠️ Goal API Rate Limit reached (HTTP 429). Skipped cycle safely.');
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Rate limit hit, skipped safely without error.', 
+          status: 429 
+        });
+      }
       return NextResponse.json({ 
         success: false, 
         error: `Goal API returned HTTP ${liveRes.status}` 
