@@ -125,6 +125,7 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
       .from('matches')
       .select('*')
       .order('date', { ascending: false })
+      .order('id', { ascending: true })
       .limit(limit);
 
     if (leagueCode && leagueCode !== 'ALL') {

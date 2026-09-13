@@ -6,6 +6,7 @@ import { LeagueCode, StandingItem } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { useFootball } from '@/context/FootballContext';
 import { calculateStandingsFromMatches } from '@/utils/standingsCalculations';
+import { ScrollReveal } from '@/components/ScrollReveal';
 import { Trophy, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 
 interface CompetitionTabProps {
@@ -124,42 +125,45 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
       </div>
 
       {/* Header Info */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="text-3xl sm:text-4xl p-2.5 sm:p-3 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
-            {competition.flag}
+      <ScrollReveal direction="up" delay={0}>
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="text-3xl sm:text-4xl p-2.5 sm:p-3 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
+              {competition.flag}
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                <span>{competition.name}</span>
+                <span className="text-[10px] sm:text-xs bg-emerald-500/10 text-emerald-400 px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                  Mùa {competition.season}
+                </span>
+              </h2>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                Quốc gia: <strong>{competition.country}</strong> • Quy mô: <strong>{effectiveStandings.length || competition.totalTeams} Đội bóng</strong>
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
-              <span>{competition.name}</span>
-              <span className="text-[10px] sm:text-xs bg-emerald-500/10 text-emerald-400 px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                Mùa {competition.season}
-              </span>
-            </h2>
-            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-              Quốc gia: <strong>{competition.country}</strong> • Quy mô: <strong>{effectiveStandings.length || competition.totalTeams} Đội bóng</strong>
-            </p>
+
+          <div className="flex items-center gap-3 text-xs w-full sm:w-auto">
+            <div className="flex-1 sm:flex-initial bg-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-center">
+              <span className="text-slate-500 block text-[10px] sm:text-xs">Đã Đấu</span>
+              <strong className="text-white font-mono text-xs sm:text-sm">
+                {leagueMatches.filter(m => m.status === 'FINISHED').length} Trận
+              </strong>
+            </div>
+
+            <div className="flex-1 sm:flex-initial bg-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-center">
+              <span className="text-slate-500 block text-[10px] sm:text-xs">Nguồn</span>
+              <strong className="text-[11px] sm:text-xs font-mono font-bold text-emerald-400">
+                🟢 Live Standings
+              </strong>
+            </div>
           </div>
         </div>
+      </ScrollReveal>
 
-        <div className="flex items-center gap-3 text-xs w-full sm:w-auto">
-          <div className="flex-1 sm:flex-initial bg-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-center">
-            <span className="text-slate-500 block text-[10px] sm:text-xs">Đã Đấu</span>
-            <strong className="text-white font-mono text-xs sm:text-sm">
-              {leagueMatches.filter(m => m.status === 'FINISHED').length} Trận
-            </strong>
-          </div>
-
-          <div className="flex-1 sm:flex-initial bg-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-center">
-            <span className="text-slate-500 block text-[10px] sm:text-xs">Nguồn</span>
-            <strong className="text-[11px] sm:text-xs font-mono font-bold text-emerald-400">
-              🟢 Live Standings
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up animation-delay-150">
+      <ScrollReveal direction="up" delay={50}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Standings Table (2 cols) */}
         <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
@@ -324,6 +328,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
           </div>
         </div>
       </div>
+      </ScrollReveal>
     </div>
   );
 };
