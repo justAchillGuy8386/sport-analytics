@@ -48,7 +48,7 @@ export const Sidebar: React.FC = () => {
   };
 
   const navItems = [
-    { href: '/', label: 'Tổng quan (Overview)', icon: BarChart3 },
+    { href: '/', label: 'Tổng quan', icon: BarChart3 },
     { href: '/competition', label: 'BXH & Giải đấu', icon: Trophy },
     { href: '/team', label: 'Phân tích Đội bóng', icon: Users },
     { href: '/match', label: 'Match Center & Live', icon: Swords },

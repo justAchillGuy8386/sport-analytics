@@ -18,7 +18,7 @@ export default function OverviewPage() {
     <div className="space-y-4">
       {isLoadingApi && (
         <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl py-2 px-4 text-center text-xs font-semibold text-emerald-300 animate-pulse">
-          ⚡ Đang truy vấn dữ liệu trực tiếp từ Supabase Database...
+          ⚡ Đang truy vấn dữ liệu trực tiếp...
         </div>
       )}
 
