@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { COMPETITIONS } from '@/constants/competitions';
 import { LeagueCode, StandingItem } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
@@ -104,6 +104,21 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
     ? standings 
     : calculateStandingsFromMatches(leagueMatches);
 
+  const [fixtureFilter, setFixtureFilter] = useState<'ALL' | 'FINISHED' | 'UPCOMING'>('ALL');
+
+  const filteredLeagueMatches = useMemo(() => {
+    if (fixtureFilter === 'FINISHED') {
+      return leagueMatches.filter(m => m.status === 'FINISHED');
+    }
+    if (fixtureFilter === 'UPCOMING') {
+      return leagueMatches.filter(m => m.status === 'UPCOMING' || m.status === 'LIVE');
+    }
+    return leagueMatches;
+  }, [leagueMatches, fixtureFilter]);
+
+  const finishedCount = useMemo(() => leagueMatches.filter(m => m.status === 'FINISHED').length, [leagueMatches]);
+  const upcomingCount = useMemo(() => leagueMatches.filter(m => m.status === 'UPCOMING' || m.status === 'LIVE').length, [leagueMatches]);
+
   return (
     <div className="space-y-6">
       {/* League Selection Tabs */}
@@ -163,133 +178,190 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
       </ScrollReveal>
 
       <ScrollReveal direction="up" delay={50}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main Standings Table (2 cols) */}
-        <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>BXH Chi Tiết ({competition.name} Mùa 2026/27)</span>
-            </h3>
-            {isLoadingStandings ? (
-              <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Tải BXH...</span>
+        <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl self-start flex flex-col justify-between">
+          <div>
+            <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>BXH Chi Tiết ({competition.name} Mùa 2026/27)</span>
+              </h3>
+              {isLoadingStandings ? (
+                <span className="text-xs text-emerald-400 font-mono animate-pulse">⚡ Tải BXH...</span>
+              ) : (
+                <span className="text-[10px] sm:text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Season 2026/27
+                </span>
+              )}
+            </div>
+
+            {effectiveStandings.length === 0 ? (
+              <div className="p-8 sm:p-12 text-center text-slate-400 space-y-3">
+                <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
+                <p className="text-sm font-medium">Đang cập nhật bảng xếp hạng cho mùa 2026/27...</p>
+                <p className="text-xs text-slate-500">Dữ liệu thi đấu đang được tự động tổng hợp từ Supabase DB.</p>
+              </div>
             ) : (
-              <span className="text-[10px] sm:text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Season 2026/27
-              </span>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left text-xs min-w-[600px]">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="py-2.5 px-3 text-center">Hạng</th>
+                      <th className="py-2.5 px-3">Đội bóng</th>
+                      <th className="py-2.5 px-2 text-center">ST</th>
+                      <th className="py-2.5 px-2 text-center">T</th>
+                      <th className="py-2.5 px-2 text-center">H</th>
+                      <th className="py-2.5 px-2 text-center">B</th>
+                      <th className="py-2.5 px-2 text-center">BT</th>
+                      <th className="py-2.5 px-2 text-center">BB</th>
+                      <th className="py-2.5 px-2 text-center">HS</th>
+                      <th className="py-2.5 px-3 text-center text-emerald-400 font-bold">Điểm</th>
+                      <th className="py-2.5 px-3 text-center">Phong độ (5 trận)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {effectiveStandings.map((item) => (
+                      <tr key={item.team.id || item.rank} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2 px-3 text-center font-bold">
+                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] ${
+                            item.rank === 1
+                              ? 'bg-amber-400/20 text-amber-300 font-bold border border-amber-400/40'
+                              : item.rank <= 4
+                              ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                              : item.rank >= (effectiveStandings.length - 3)
+                              ? 'bg-red-500/20 text-red-300 font-semibold'
+                              : 'text-slate-400'
+                          }`}>
+                            {item.rank}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 font-semibold text-white flex items-center gap-2">
+                          <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5 shrink-0" />
+                          <span className="truncate max-w-[120px] sm:max-w-none">{item.team.name}</span>
+                        </td>
+                        <td className="py-2 px-2 text-center text-slate-300 font-mono">{item.played}</td>
+                        <td className="py-2 px-2 text-center text-emerald-400 font-mono font-semibold">{item.won}</td>
+                        <td className="py-2 px-2 text-center text-slate-400 font-mono">{item.drawn}</td>
+                        <td className="py-2 px-2 text-center text-red-400 font-mono">{item.lost}</td>
+                        <td className="py-2 px-2 text-center text-slate-300 font-mono">{item.goalsFor}</td>
+                        <td className="py-2 px-2 text-center text-slate-400 font-mono">{item.goalsAgainst}</td>
+                        <td className="py-2 px-2 text-center font-mono font-semibold text-slate-200">
+                          {item.goalDifference > 0 ? `+${item.goalDifference}` : item.goalDifference}
+                        </td>
+                        <td className="py-2 px-3 text-center text-emerald-400 font-black text-sm font-mono">
+                          {item.points}
+                        </td>
+                        <td className="py-2 px-3">
+                          <div className="flex items-center justify-center gap-1">
+                            {(() => {
+                              const validForm = (item.form || []).slice(-Math.min(item.played, 5));
+                              if (validForm.length === 0) {
+                                return <span className="text-slate-600 font-mono text-xs">-</span>;
+                              }
+                              return validForm.map((res, i) => (
+                                <span
+                                  key={i}
+                                  className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
+                                    res === 'W'
+                                      ? 'bg-emerald-500 text-slate-950'
+                                      : res === 'D'
+                                      ? 'bg-slate-600 text-white'
+                                      : 'bg-red-500 text-white'
+                                  }`}
+                                >
+                                  {res}
+                                </span>
+                              ));
+                            })()}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
-          {effectiveStandings.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center text-slate-400 space-y-3">
-              <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
-              <p className="text-sm font-medium">Đang cập nhật bảng xếp hạng cho mùa 2026/27...</p>
-              <p className="text-xs text-slate-500">Dữ liệu thi đấu đang được tự động tổng hợp từ Supabase DB.</p>
+          {/* Standings Legend Footer */}
+          <div className="p-3 bg-slate-950/60 border-t border-slate-800 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-3.5 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                <span>Champions League (Top 4)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <span>Xuống hạng (Top {Math.max(1, effectiveStandings.length - 2)} - {effectiveStandings.length})</span>
+              </span>
             </div>
-          ) : (
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs min-w-[600px]">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
-                  <tr>
-                    <th className="py-3 px-3 text-center">Hạng</th>
-                    <th className="py-3 px-4">Đội bóng</th>
-                    <th className="py-3 px-2 text-center">ST</th>
-                    <th className="py-3 px-2 text-center">T</th>
-                    <th className="py-3 px-2 text-center">H</th>
-                    <th className="py-3 px-2 text-center">B</th>
-                    <th className="py-3 px-2 text-center">BT</th>
-                    <th className="py-3 px-2 text-center">BB</th>
-                    <th className="py-3 px-2 text-center">HS</th>
-                    <th className="py-3 px-3 text-center text-emerald-400 font-bold">Điểm</th>
-                    <th className="py-3 px-4 text-center">Phong độ (5 trận)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {effectiveStandings.map((item) => (
-                    <tr key={item.team.id || item.rank} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-3 text-center font-bold">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
-                          item.rank === 1
-                            ? 'bg-amber-400/20 text-amber-300 font-bold border border-amber-400/40'
-                            : item.rank <= 4
-                            ? 'bg-blue-500/20 text-blue-300 font-semibold'
-                            : item.rank >= (effectiveStandings.length - 3)
-                            ? 'bg-red-500/20 text-red-300 font-semibold'
-                            : 'text-slate-400'
-                        }`}>
-                          {item.rank}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
-                        <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5 shrink-0" />
-                        <span className="truncate max-w-[120px] sm:max-w-none">{item.team.name}</span>
-                      </td>
-                      <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.played}</td>
-                      <td className="py-3 px-2 text-center text-emerald-400 font-mono font-semibold">{item.won}</td>
-                      <td className="py-3 px-2 text-center text-slate-400 font-mono">{item.drawn}</td>
-                      <td className="py-3 px-2 text-center text-red-400 font-mono">{item.lost}</td>
-                      <td className="py-3 px-2 text-center text-slate-300 font-mono">{item.goalsFor}</td>
-                      <td className="py-3 px-2 text-center text-slate-400 font-mono">{item.goalsAgainst}</td>
-                      <td className="py-3 px-2 text-center font-mono font-semibold text-slate-200">
-                        {item.goalDifference > 0 ? `+${item.goalDifference}` : item.goalDifference}
-                      </td>
-                      <td className="py-3 px-3 text-center text-emerald-400 font-black text-sm font-mono">
-                        {item.points}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center justify-center gap-1">
-                          {(() => {
-                            const validForm = (item.form || []).slice(-Math.min(item.played, 5));
-                            if (validForm.length === 0) {
-                              return <span className="text-slate-600 font-mono text-xs">-</span>;
-                            }
-                            return validForm.map((res, i) => (
-                              <span
-                                key={i}
-                                className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
-                                  res === 'W'
-                                    ? 'bg-emerald-500 text-slate-950'
-                                    : res === 'D'
-                                    ? 'bg-slate-600 text-white'
-                                    : 'bg-red-500 text-white'
-                                }`}
-                              >
-                                {res}
-                              </span>
-                            ));
-                          })()}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+            <span className="text-[10px] text-slate-500 font-mono">Dữ liệu thời gian thực</span>
+          </div>
         </div>
 
         {/* Fixtures & Results List (1 col) */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Kết Quả & Lịch Thi Đấu ({activeLeague})</span>
-            </h3>
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between self-start h-full max-h-[860px]">
+          <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>Lịch Thi Đấu & Kết Quả</span>
+              </h3>
+              <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                {filteredLeagueMatches.length} trận
+              </span>
+            </div>
 
-            <div className="space-y-3">
-              {leagueMatches.length === 0 ? (
-                <p className="text-xs text-slate-500 italic py-6 text-center">
-                  Hiện chưa có danh sách trận đấu thực tế cho giải này...
+            {/* Filter Tabs */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px] mb-3 shrink-0 text-center">
+              <button
+                onClick={() => setFixtureFilter('ALL')}
+                className={`py-1 rounded-lg font-medium transition-all ${
+                  fixtureFilter === 'ALL'
+                    ? 'bg-slate-800 text-white font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Tất cả ({leagueMatches.length})
+              </button>
+              <button
+                onClick={() => setFixtureFilter('FINISHED')}
+                className={`py-1 rounded-lg font-medium transition-all ${
+                  fixtureFilter === 'FINISHED'
+                    ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Kết thúc ({finishedCount})
+              </button>
+              <button
+                onClick={() => setFixtureFilter('UPCOMING')}
+                className={`py-1 rounded-lg font-medium transition-all ${
+                  fixtureFilter === 'UPCOMING'
+                    ? 'bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Sắp đấu ({upcomingCount})
+              </button>
+            </div>
+
+            {/* Scrollable match list */}
+            <div className="space-y-2.5 overflow-y-auto custom-scrollbar flex-1 pr-1 max-h-[700px]">
+              {filteredLeagueMatches.length === 0 ? (
+                <p className="text-xs text-slate-500 italic py-12 text-center">
+                  Không có trận đấu nào phù hợp với bộ lọc...
                 </p>
               ) : (
-                leagueMatches.map(m => (
+                filteredLeagueMatches.map(m => (
                   <div
                     key={m.id}
                     onClick={() => onSelectMatch(m.id)}
-                    className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl hover:border-slate-700 transition-all cursor-pointer group"
+                    className="p-2.5 sm:p-3 bg-slate-950/60 border border-slate-800 rounded-xl hover:border-slate-700 hover:bg-slate-950/90 transition-all cursor-pointer group"
                   >
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
-                      <span className="font-semibold">{m.round}</span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
+                      <span className="font-semibold text-slate-300">{m.round}</span>
                       <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
                         m.status === 'LIVE'
                           ? 'bg-red-500/20 text-red-400 animate-pulse'
@@ -322,8 +394,8 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Standings season: <code>2026/27</code></span>
+          <div className="mt-3 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+            <span>Mùa giải: <code>2026/27</code></span>
             <span className="text-emerald-400 font-medium">Real-time Data</span>
           </div>
         </div>
