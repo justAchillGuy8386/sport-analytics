@@ -60,6 +60,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
   }, [filteredMatches]);
 
+  // Group live matches by league according to official order (PL, LL, SA, BL, L1, UCL)
+  const liveMatchesByLeague = useMemo(() => {
+    const groups: { comp: { id: string; name: string; flag: string }; matches: Match[] }[] = [];
+    
+    for (const comp of COMPETITIONS) {
+      const compMatches = liveMatches.filter(m => m.leagueId === comp.id);
+      if (compMatches.length > 0) {
+        groups.push({
+          comp: { id: comp.id, name: comp.name, flag: comp.flag },
+          matches: compMatches
+        });
+      }
+    }
+
+    const knownIds = new Set(COMPETITIONS.map(c => c.id));
+    const otherMatches = liveMatches.filter(m => !knownIds.has(m.leagueId as any));
+    if (otherMatches.length > 0) {
+      groups.push({
+        comp: { id: 'OTHER', name: 'Giải Đấu Khác', flag: '⚽' },
+        matches: otherMatches
+      });
+    }
+
+    return groups;
+  }, [liveMatches]);
+
   // Prepare chart data comparing leagues using full dataset across all leagues
   const leagueComparisonData = COMPETITIONS.map(comp => {
     const compMatches = datasetForComparison.filter(m => m.leagueId === comp.id);
@@ -101,43 +127,62 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">Goal API Real-time Sync</span>
             </div>
 
-            {/* Grid of multiple LIVE matches */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              {liveMatches.map((liveMatch) => (
-                <div 
-                  key={liveMatch.id} 
-                  onClick={() => onSelectMatch(liveMatch.id)}
-                  className="bg-slate-950/80 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 hover:border-red-500/50 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                    <span className="bg-slate-900 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-800">
-                      {liveMatch.leagueId} • {liveMatch.round}
+            {/* Sub-sections partitioned by league */}
+            <div className="space-y-5">
+              {liveMatchesByLeague.map(({ comp, matches: groupMatches }) => (
+                <div key={comp.id} className="space-y-2.5">
+                  {/* League sub-header */}
+                  <div className="flex items-center gap-2 pt-1 first:pt-0">
+                    <span className="text-base leading-none">{comp.flag}</span>
+                    <span className="text-xs font-bold text-slate-200 tracking-wide uppercase font-mono">
+                      {comp.name}
                     </span>
-                    <span className="text-red-400 font-bold text-xs animate-pulse font-mono">
-                      {getLiveMinute(liveMatch)}
+                    <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 font-mono px-2 py-0.5 rounded-full font-bold">
+                      {groupMatches.length} trận LIVE
                     </span>
+                    <div className="flex-1 h-[1px] bg-red-500/20 ml-2"></div>
                   </div>
 
-                  <div className="grid grid-cols-3 items-center text-center my-2 gap-1">
-                    <div className="flex items-center gap-1.5 justify-end overflow-hidden">
-                      <span className="font-bold text-white text-xs sm:text-sm truncate">{liveMatch.homeTeam.shortName || liveMatch.homeTeam.name}</span>
-                      <TeamLogo logo={liveMatch.homeTeam.logo} name={liveMatch.homeTeam.name} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-                    </div>
+                  {/* Matches grid for this league */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    {groupMatches.map((liveMatch) => (
+                      <div 
+                        key={liveMatch.id} 
+                        onClick={() => onSelectMatch(liveMatch.id)}
+                        className="bg-slate-950/80 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 hover:border-red-500/50 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                          <span className="bg-slate-900 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-800">
+                            {liveMatch.round}
+                          </span>
+                          <span className="text-red-400 font-bold text-xs animate-pulse font-mono">
+                            {getLiveMinute(liveMatch)}
+                          </span>
+                        </div>
 
-                    <div className="text-lg sm:text-xl font-black text-white font-mono">
-                      {liveMatch.homeScore} - {liveMatch.awayScore}
-                    </div>
+                        <div className="grid grid-cols-3 items-center text-center my-2 gap-1">
+                          <div className="flex items-center gap-1.5 justify-end overflow-hidden">
+                            <span className="font-bold text-white text-xs sm:text-sm truncate">{liveMatch.homeTeam.shortName || liveMatch.homeTeam.name}</span>
+                            <TeamLogo logo={liveMatch.homeTeam.logo} name={liveMatch.homeTeam.name} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                          </div>
 
-                    <div className="flex items-center gap-1.5 justify-start overflow-hidden">
-                      <TeamLogo logo={liveMatch.awayTeam.logo} name={liveMatch.awayTeam.name} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-                      <span className="font-bold text-white text-xs sm:text-sm truncate">{liveMatch.awayTeam.shortName || liveMatch.awayTeam.name}</span>
-                    </div>
-                  </div>
+                          <div className="text-lg sm:text-xl font-black text-white font-mono">
+                            {liveMatch.homeScore} - {liveMatch.awayScore}
+                          </div>
 
-                  <div className="text-right mt-2">
-                    <span className="text-[11px] text-red-400 group-hover:underline font-medium">
-                      Xem Match Center →
-                    </span>
+                          <div className="flex items-center gap-1.5 justify-start overflow-hidden">
+                            <TeamLogo logo={liveMatch.awayTeam.logo} name={liveMatch.awayTeam.name} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                            <span className="font-bold text-white text-xs sm:text-sm truncate">{liveMatch.awayTeam.shortName || liveMatch.awayTeam.name}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right mt-2">
+                          <span className="text-[11px] text-red-400 group-hover:underline font-medium">
+                            Xem Match Center →
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
