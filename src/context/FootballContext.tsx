@@ -20,6 +20,8 @@ interface FootballContextType {
   refreshQuota: () => Promise<void>;
   selectedMatchId: string;
   setSelectedMatchId: (id: string) => void;
+  updateMatch: (match: Match) => void;
+  refreshMatches: () => Promise<void>;
 }
 
 const FootballContext = createContext<FootballContextType | undefined>(undefined);
@@ -97,6 +99,22 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => clearInterval(intervalId);
   }, [refreshQuota, hasLiveMatches]);
 
+  const updateMatch = useCallback((updatedMatch: Match) => {
+    setAllMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
+  }, []);
+
+  const refreshMatches = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/football?league=ALL&_t=${Date.now()}`, { cache: 'no-store' });
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data)) {
+        setAllMatches(result.data);
+      }
+    } catch (err) {
+      console.error('Database refresh error:', err);
+    }
+  }, []);
+
   return (
     <FootballContext.Provider
       value={{
@@ -113,7 +131,9 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setQuotaUsed,
         refreshQuota,
         selectedMatchId,
-        setSelectedMatchId
+        setSelectedMatchId,
+        updateMatch,
+        refreshMatches
       }}
     >
       {children}
