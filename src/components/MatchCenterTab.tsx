@@ -4,7 +4,39 @@ import React, { useState, useEffect } from 'react';
 import { Match } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { getLiveMinute } from '@/utils/matchTime';
-import { Swords, Clock, MapPin, User, Activity, AlertCircle } from 'lucide-react';
+import { useFootball } from '@/context/FootballContext';
+import { Swords, Clock, MapPin, User, Activity, AlertCircle, Calendar, RefreshCw } from 'lucide-react';
+
+const formatMatchDateTime = (dateStr?: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const weekday = days[d.getDay()];
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${weekday}, ${day}/${month}/${year} • ${hours}:${minutes}`;
+  } catch {
+    return dateStr || '';
+  }
+};
+
+const formatShortDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
+  } catch {
+    return '';
+  }
+};
 
 interface MatchCenterTabProps {
   matches: Match[];
@@ -48,6 +80,9 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
   const activeMatch = matchDataList.find(m => m.id === activeMatchId) || matchDataList[0];
   const { homeTeam, awayTeam, homeScore, awayScore, stats, events, lineups } = activeMatch;
 
+  const { updateMatch } = useFootball();
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const defaultTeamStats = {
     possession: 50,
     shots: 0,
@@ -63,6 +98,28 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
   const safeStats = {
     home: stats?.home || defaultTeamStats,
     away: stats?.away || defaultTeamStats
+  };
+
+  const isStatsMissing = activeMatch.status === 'FINISHED' && (
+    (safeStats.home.shots === 0 && safeStats.away.shots === 0 && safeStats.home.corners === 0 && safeStats.away.corners === 0) ||
+    ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0) > 0 && 
+     (events || []).filter(e => e.type === 'goal').length < ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0)))
+  );
+
+  const handleSyncMatchDetails = async () => {
+    if (isSyncing || !activeMatch?.id) return;
+    setIsSyncing(true);
+    try {
+      const res = await fetch(`/api/admin/sync?fixtureId=${activeMatch.id}`);
+      const data = await res.json();
+      if (data.success && data.match) {
+        updateMatch(data.match);
+      }
+    } catch (err) {
+      console.error('Failed to sync match details:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -82,6 +139,11 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             <span className="flex items-center gap-1.5 font-semibold text-white">
               {m.homeTeam.shortName || m.homeTeam.name} vs {m.awayTeam.shortName || m.awayTeam.name}
             </span>
+            {m.date && (
+              <span className="text-[10px] text-slate-400 font-mono hidden sm:inline" suppressHydrationWarning>
+                {formatShortDate(m.date)}
+              </span>
+            )}
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
               m.status === 'LIVE' ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-800 text-slate-300'
             }`}>
@@ -94,11 +156,20 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
       {/* Match Header Scoreboard */}
       <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden animate-fade-in-up animation-delay-100">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 mb-4 sm:mb-6 border-b border-slate-800/80 pb-3 gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded font-bold font-mono text-[11px]">
               {activeMatch.leagueId} • {activeMatch.season}
             </span>
-            <span className="text-[11px] sm:text-xs font-medium">{activeMatch.round}</span>
+            <span className="text-[11px] sm:text-xs font-medium text-slate-300">{activeMatch.round}</span>
+            {activeMatch.date && (
+              <span 
+                suppressHydrationWarning
+                className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-emerald-300 bg-slate-950/80 border border-slate-800 px-2.5 py-0.5 rounded-lg shadow-inner"
+              >
+                <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>{formatMatchDateTime(activeMatch.date)}</span>
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3 text-[11px] sm:text-xs">
@@ -141,7 +212,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
               <div className="text-xl sm:text-2xl font-bold text-slate-400 font-mono">VS</div>
             )}
 
-            <div className="mt-1.5 sm:mt-2">
+            <div className="mt-1.5 sm:mt-2 flex flex-col items-center gap-1.5">
               {activeMatch.status === 'LIVE' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] sm:text-xs font-bold animate-pulse">
                   <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -153,7 +224,18 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] sm:text-xs font-medium">
-                  {new Date(activeMatch.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  Sắp diễn ra
+                </span>
+              )}
+
+              {/* Match Kickoff Date & Time */}
+              {activeMatch.date && (
+                <span 
+                  suppressHydrationWarning
+                  className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 font-medium mt-0.5"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span><strong className="text-slate-200 font-semibold">{formatMatchDateTime(activeMatch.date)}</strong></span>
                 </span>
               )}
             </div>
@@ -174,10 +256,24 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up animation-delay-200">
         {/* Match Statistics Progress Bars */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Thống Kê Chi Tiết Trận Đấu (Match Statistics)</span>
-          </h3>
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Thống Kê Chi Tiết Trận Đấu (Match Statistics)</span>
+            </h3>
+
+            {isStatsMissing && (
+              <button
+                onClick={handleSyncMatchDetails}
+                disabled={isSyncing}
+                title="Bấm để đồng bộ đầy đủ các chỉ số cú sút, phạt góc và diễn biến từ Goal API"
+                className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Đang cập nhật...' : 'Lấy đủ chỉ số trận này'}</span>
+              </button>
+            )}
+          </div>
 
           <div className="space-y-4 text-xs">
             {/* Possession */}
@@ -249,36 +345,118 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
         {/* Match Timeline & Key Events */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Swords className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Diễn Biến Chính Trận Đấu (Match Timeline)</span>
-            </h3>
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Swords className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Diễn Biến Chính Trận Đấu (Match Timeline)</span>
+              </h3>
 
-            <div className="space-y-3 relative before:absolute before:left-1/2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+              {isStatsMissing && (
+                <button
+                  onClick={handleSyncMatchDetails}
+                  disabled={isSyncing}
+                  title="Bấm để đồng bộ đầy đủ diễn biến bàn thắng, thẻ phạt từ Goal API"
+                  className="text-[11px] font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>{isSyncing ? 'Đang cập nhật...' : 'Cập nhật diễn biến'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Timeline Team Headers */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs">
+              <div className="flex items-center gap-2 max-w-[42%] overflow-hidden">
+                <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-5 h-5 shrink-0" />
+                <span className="font-bold text-white truncate">{homeTeam.shortName || homeTeam.name}</span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-500 font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-950 rounded-full border border-slate-800">
+                Phút
+              </span>
+              <div className="flex items-center gap-2 justify-end max-w-[42%] overflow-hidden">
+                <span className="font-bold text-white truncate">{awayTeam.shortName || awayTeam.name}</span>
+                <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-5 h-5 shrink-0" />
+              </div>
+            </div>
+
+            <div className="space-y-3 relative before:absolute before:left-1/2 before:top-1 before:bottom-1 before:-translate-x-1/2 before:w-0.5 before:bg-slate-800">
               {events && events.length > 0 ? (
                 events.map((ev) => {
-                  const isHomeEvent = ev.teamId === homeTeam.id;
+                  const isHomeEvent = 
+                    ev.teamId === 'home' || 
+                    ev.teamId === '1' || 
+                    String(ev.teamId) === String(homeTeam.id) ||
+                    String(ev.teamId).toLowerCase() === 'home' ||
+                    (homeTeam.name && String(ev.teamId).toLowerCase() === homeTeam.name.toLowerCase());
+
+                  const eventIcon = (() => {
+                    switch (ev.type) {
+                      case 'goal':
+                        return <span className="text-emerald-400 font-bold text-xs" title="Bàn thắng">⚽</span>;
+                      case 'yellow_card':
+                        return <span className="inline-block w-2.5 h-3.5 bg-amber-400 rounded-[2px] shadow-xs" title="Thẻ vàng"></span>;
+                      case 'red_card':
+                        return <span className="inline-block w-2.5 h-3.5 bg-red-500 rounded-[2px] shadow-xs" title="Thẻ đỏ"></span>;
+                      case 'substitution':
+                        return <span className="text-cyan-400 text-xs font-bold" title="Thay người">🔄</span>;
+                      default:
+                        return <span className="text-slate-400 text-xs">⚡</span>;
+                    }
+                  })();
+
+                  const eventLabel = (() => {
+                    switch (ev.type) {
+                      case 'goal': return 'Bàn thắng';
+                      case 'yellow_card': return 'Thẻ vàng';
+                      case 'red_card': return 'Thẻ đỏ';
+                      case 'substitution': return 'Thay người';
+                      default: return ev.type;
+                    }
+                  })();
+
                   return (
-                    <div
-                      key={ev.id}
-                      className={`flex items-center text-xs ${
-                        isHomeEvent ? 'justify-start' : 'justify-end'
-                      }`}
-                    >
-                      <div className={`w-1/2 flex items-center gap-2 ${isHomeEvent ? 'pr-3 justify-end text-right' : 'pl-3 justify-start text-left'}`}>
+                    <div key={ev.id} className="flex items-center text-xs py-1">
+                      {/* Left Column: Home Team Event */}
+                      <div className="flex-1 flex items-center justify-end gap-2 pr-3 text-right overflow-hidden min-w-0">
                         {isHomeEvent && (
                           <div className="overflow-hidden">
-                            <span className="font-bold text-white block truncate">{ev.player}</span>
-                            <span className="text-[10px] text-slate-400">{ev.type}</span>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <span className="font-bold text-white truncate text-xs">{ev.player}</span>
+                              {eventIcon}
+                            </div>
+                            <span className="text-[10px] text-slate-400 block truncate">
+                              {ev.assistPlayer ? `Kiến tạo: ${ev.assistPlayer}` : (ev.detail || eventLabel)}
+                            </span>
                           </div>
                         )}
-                        <span className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-mono font-bold text-emerald-400 shrink-0">
+                      </div>
+
+                      {/* Center Axis: Time Badge */}
+                      <div className="w-9 flex justify-center items-center shrink-0 relative z-10">
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shadow-md border ${
+                          ev.type === 'goal'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                            : ev.type === 'red_card'
+                            ? 'bg-red-500/20 text-red-300 border-red-500/50'
+                            : ev.type === 'yellow_card'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                            : 'bg-slate-800 text-slate-300 border-slate-700'
+                        }`}>
                           {ev.time}'
                         </span>
+                      </div>
+
+                      {/* Right Column: Away Team Event */}
+                      <div className="flex-1 flex items-center justify-start gap-2 pl-3 text-left overflow-hidden min-w-0">
                         {!isHomeEvent && (
                           <div className="overflow-hidden">
-                            <span className="font-bold text-white block truncate">{ev.player}</span>
-                            <span className="text-[10px] text-slate-400">{ev.type}</span>
+                            <div className="flex items-center justify-start gap-1.5">
+                              {eventIcon}
+                              <span className="font-bold text-white truncate text-xs">{ev.player}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block truncate">
+                              {ev.assistPlayer ? `Kiến tạo: ${ev.assistPlayer}` : (ev.detail || eventLabel)}
+                            </span>
                           </div>
                         )}
                       </div>

@@ -9,9 +9,25 @@ import { TeamLogo } from '@/components/TeamLogo';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { 
   Trophy, Target, Flame, Shield, Flag, 
-  Percent, TrendingUp, Home, Scale, PlaneLanding, Radio, Info
+  Percent, TrendingUp, Home, Scale, PlaneLanding, Radio, Info, Calendar
 } from 'lucide-react';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+
+const formatDateOnly = (dateStr?: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const weekday = days[d.getDay()];
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${weekday}, ${day}/${month}/${year}`;
+  } catch {
+    return dateStr || '';
+  }
+};
 
 const LEAGUE_DISPLAY_ORDER: Record<string, number> = {
   PL: 1,
@@ -119,7 +135,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <div className="flex items-center gap-2">
                   <Radio className="w-4 h-4 text-red-400 animate-pulse" />
                   <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                    {liveMatches.length} Trận Đấu Trực Tiếp (LIVE)
+                    {liveMatches.length} Trận Đấu Trực Tiếp
                   </span>
                 </div>
               </div>
@@ -137,9 +153,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     <span className="text-xs font-bold text-slate-200 tracking-wide uppercase font-mono">
                       {comp.name}
                     </span>
-                    <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 font-mono px-2 py-0.5 rounded-full font-bold">
-                      {groupMatches.length} trận LIVE
-                    </span>
                     <div className="flex-1 h-[1px] bg-red-500/20 ml-2"></div>
                   </div>
 
@@ -151,11 +164,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         onClick={() => onSelectMatch(liveMatch.id)}
                         className="bg-slate-950/80 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 hover:border-red-500/50 transition-all cursor-pointer group"
                       >
-                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                          <span className="bg-slate-900 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-800">
-                            {liveMatch.round}
-                          </span>
-                          <span className="text-red-400 font-bold text-xs animate-pulse font-mono">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2 gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="bg-slate-900 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-800">
+                              {liveMatch.round}
+                            </span>
+                            {liveMatch.date && (
+                              <span 
+                                suppressHydrationWarning
+                                className="text-[11px] text-slate-400 flex items-center gap-1 font-medium font-mono"
+                              >
+                                <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
+                                <span>{formatDateOnly(liveMatch.date)}</span>
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-red-400 font-bold text-xs animate-pulse font-mono shrink-0">
                             {getLiveMinute(liveMatch)}
                           </span>
                         </div>
