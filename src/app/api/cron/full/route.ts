@@ -33,6 +33,41 @@ function isAuthorized(request: Request): boolean {
   return false;
 }
 
+function checkHasFullDetailedStats(existing: any, raw: any): boolean {
+  if (!existing) return false;
+
+  const hScore = parseInt(raw.homeTeamScore ?? raw.homeTeamFtScore ?? '0', 10) || 0;
+  const aScore = parseInt(raw.awayTeamScore ?? raw.awayTeamFtScore ?? '0', 10) || 0;
+  const totalGoals = hScore + aScore;
+
+  const stats = existing.stats;
+  const hasRealStats = stats && (
+    (stats.home?.shots > 0 || stats.away?.shots > 0) ||
+    (stats.home?.corners > 0 || stats.away?.corners > 0) ||
+    (stats.home?.fouls > 0 || stats.away?.fouls > 0)
+  );
+
+  const events = Array.isArray(existing.events) ? existing.events : [];
+  const goalEventsCount = events.filter((e: any) => e.type === 'goal').length;
+
+  // 1. If match had goals, but recorded goal events are fewer than total goals -> Incomplete!
+  if (totalGoals > 0 && goalEventsCount < totalGoals) {
+    return false;
+  }
+
+  // 2. If it has real match stats (shots, corners, or fouls) -> Complete!
+  if (hasRealStats) {
+    return true;
+  }
+
+  // 3. If match was 0-0 and has recorded events and differentiated possession -> Complete!
+  if (totalGoals === 0 && events.length > 0 && stats?.home?.possession !== 50) {
+    return true;
+  }
+
+  return false;
+}
+
 async function handleFullSync(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ success: false, error: 'Unauthorized: Invalid or missing CRON_SECRET.' }, { status: 401 });
@@ -104,35 +139,32 @@ async function handleFullSync(request: Request) {
             existingInDb.forEach((item: any) => existingMap.set(String(item.id), item));
           }
 
+          let detailsFetchedInLeague = 0;
+          const MAX_DETAILS_PER_LEAGUE = 5;
+
           for (let i = 0; i < resJson.data.length; i++) {
             const raw = resJson.data[i];
             const existing = existingMap.get(String(raw.id));
-            const hasDetailedStats = existing && (
-              (existing.events && existing.events.length > 0) ||
-              (existing.stats?.home?.shots > 0 || existing.stats?.away?.shots > 0 ||
-               existing.stats?.home?.corners > 0 || existing.stats?.away?.corners > 0)
-            );
+            const hasDetailedStats = checkHasFullDetailedStats(existing, raw);
 
-            if (i < 3) {
-              if (hasDetailedStats) {
-                // Already has full stats & events in DB - preserve them and save 1 API call!
-                const mapped = mapGoalFixtureToMatch(raw, leagueCode);
-                mapped.stats = existing.stats;
-                mapped.events = existing.events;
-                fetchedMatches.push(mapped);
-              } else {
-                // Fetch full match statistics & events for recently completed match
-                const details = await fetchGoalFixtureDetails(raw.id, apiKey);
-                requestsCount++;
-                fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
-              }
-            } else {
-              // For matches beyond top 3: preserve details if they were fetched previously
+            if (hasDetailedStats) {
+              // Already has full stats & events in DB - preserve them and save 1 API call!
               const mapped = mapGoalFixtureToMatch(raw, leagueCode);
-              if (hasDetailedStats) {
-                mapped.stats = existing.stats;
-                mapped.events = existing.events;
-              }
+              mapped.stats = existing.stats;
+              mapped.events = existing.events;
+              fetchedMatches.push(mapped);
+            } else if (detailsFetchedInLeague < MAX_DETAILS_PER_LEAGUE) {
+              // Match lacks complete details (e.g. partial live events or missing stats)
+              // Fetch full match statistics & events for recently completed match
+              const details = await fetchGoalFixtureDetails(raw.id, apiKey);
+              requestsCount++;
+              detailsFetchedInLeague++;
+              fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
+            } else {
+              // For matches beyond budget: preserve details if they were fetched previously
+              const mapped = mapGoalFixtureToMatch(raw, leagueCode);
+              if (existing?.stats) mapped.stats = existing.stats;
+              if (existing?.events) mapped.events = existing.events;
               fetchedMatches.push(mapped);
             }
           }

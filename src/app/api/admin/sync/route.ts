@@ -12,6 +12,83 @@ export const dynamic = 'force-dynamic';
 
 const GOAL_API_BASE = 'https://api.goal-api.com/v1';
 
+function checkHasFullDetailedStats(existing: any, raw: any): boolean {
+  if (!existing) return false;
+
+  const hScore = parseInt(raw.homeTeamScore ?? raw.homeTeamFtScore ?? '0', 10) || 0;
+  const aScore = parseInt(raw.awayTeamScore ?? raw.awayTeamFtScore ?? '0', 10) || 0;
+  const totalGoals = hScore + aScore;
+
+  const stats = existing.stats;
+  const hasRealStats = stats && (
+    (stats.home?.shots > 0 || stats.away?.shots > 0) ||
+    (stats.home?.corners > 0 || stats.away?.corners > 0) ||
+    (stats.home?.fouls > 0 || stats.away?.fouls > 0)
+  );
+
+  const events = Array.isArray(existing.events) ? existing.events : [];
+  const goalEventsCount = events.filter((e: any) => e.type === 'goal').length;
+
+  if (totalGoals > 0 && goalEventsCount < totalGoals) {
+    return false;
+  }
+
+  if (hasRealStats) {
+    return true;
+  }
+
+  if (totalGoals === 0 && events.length > 0 && stats?.home?.possession !== 50) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function syncSingleFixture(fixtureId: string, apiKey?: string) {
+  const keyToUse = (apiKey && apiKey.trim()) || getGoalApiKey();
+  if (!keyToUse) return { success: false, message: 'Thiếu API Key' };
+
+  const adminClient = getSupabaseAdmin();
+  const details = await fetchGoalFixtureDetails(fixtureId, keyToUse);
+  if (!details) {
+    return { success: false, message: 'Không thể lấy chi tiết trận đấu từ Goal API' };
+  }
+
+  const leagueEntry = Object.entries(GOAL_LEAGUE_MAP).find(([, obj]) => obj.id === details.leagueId);
+  const leagueCode = (leagueEntry ? leagueEntry[0] : 'PL') as LeagueCode;
+  const mapped = mapGoalFixtureToMatch(details, leagueCode);
+
+  const row = {
+    id: String(mapped.id),
+    league_id: mapped.leagueId,
+    season: mapped.season || '2026/2027',
+    round: mapped.round || 'Vòng đấu',
+    status: mapped.status,
+    date: mapped.date,
+    venue: mapped.venue || '',
+    referee: mapped.referee || '',
+    elapsed_time: mapped.elapsedTime || 0,
+    home_team_id: mapped.homeTeam?.id || 'home',
+    home_team_name: mapped.homeTeam?.name || 'Home Team',
+    home_team_logo: mapped.homeTeam?.logo || '',
+    away_team_id: mapped.awayTeam?.id || 'away',
+    away_team_name: mapped.awayTeam?.name || 'Away Team',
+    away_team_logo: mapped.awayTeam?.logo || '',
+    home_score: mapped.homeScore ?? 0,
+    away_score: mapped.awayScore ?? 0,
+    stats: mapped.stats || {},
+    events: mapped.events || [],
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await adminClient.from('matches').upsert([row], { onConflict: 'id' });
+  if (error) {
+    return { success: false, message: error.message };
+  }
+
+  return { success: true, match: mapped, message: 'Đã cập nhật chi tiết trận đấu thành công!' };
+}
+
 async function performSync(apiKey?: string) {
   const keyToUse = (apiKey && apiKey.trim()) || getGoalApiKey();
   if (!keyToUse) {
@@ -71,31 +148,27 @@ async function performSync(apiKey?: string) {
             existingInDb.forEach((item: any) => existingMap.set(String(item.id), item));
           }
 
+          let detailsFetchedInLeague = 0;
+          const MAX_DETAILS_PER_LEAGUE = 5;
+
           for (let i = 0; i < resJson.data.length; i++) {
             const raw = resJson.data[i];
             const existing = existingMap.get(String(raw.id));
-            const hasDetailedStats = existing && (
-              (existing.events && existing.events.length > 0) ||
-              (existing.stats?.home?.shots > 0 || existing.stats?.away?.shots > 0 ||
-               existing.stats?.home?.corners > 0 || existing.stats?.away?.corners > 0)
-            );
+            const hasDetailedStats = checkHasFullDetailedStats(existing, raw);
 
-            if (i < 3) {
-              if (hasDetailedStats) {
-                const mapped = mapGoalFixtureToMatch(raw, leagueCode);
-                mapped.stats = existing.stats;
-                mapped.events = existing.events;
-                fetchedMatches.push(mapped);
-              } else {
-                const details = await fetchGoalFixtureDetails(raw.id, keyToUse);
-                fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
-              }
+            if (hasDetailedStats) {
+              const mapped = mapGoalFixtureToMatch(raw, leagueCode);
+              mapped.stats = existing.stats;
+              mapped.events = existing.events;
+              fetchedMatches.push(mapped);
+            } else if (detailsFetchedInLeague < MAX_DETAILS_PER_LEAGUE) {
+              const details = await fetchGoalFixtureDetails(raw.id, keyToUse);
+              detailsFetchedInLeague++;
+              fetchedMatches.push(mapGoalFixtureToMatch(details || raw, leagueCode));
             } else {
               const mapped = mapGoalFixtureToMatch(raw, leagueCode);
-              if (hasDetailedStats) {
-                mapped.stats = existing.stats;
-                mapped.events = existing.events;
-              }
+              if (existing?.stats) mapped.stats = existing.stats;
+              if (existing?.events) mapped.events = existing.events;
               fetchedMatches.push(mapped);
             }
           }
@@ -177,6 +250,10 @@ async function performSync(apiKey?: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
+    if (body?.fixtureId || body?.matchId) {
+      const result = await syncSingleFixture(body.fixtureId || body.matchId, body?.apiKey);
+      return NextResponse.json(result);
+    }
     const result = await performSync(body?.apiKey);
     return NextResponse.json(result);
   } catch (err: any) {
@@ -186,7 +263,14 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const fixtureId = searchParams.get('fixtureId') || searchParams.get('matchId');
   const apiKey = searchParams.get('apiKey') || undefined;
+
+  if (fixtureId) {
+    const result = await syncSingleFixture(fixtureId, apiKey);
+    return NextResponse.json(result);
+  }
+
   const result = await performSync(apiKey);
   return NextResponse.json(result);
 }
