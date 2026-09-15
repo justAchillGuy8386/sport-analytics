@@ -47,11 +47,14 @@ export const Sidebar: React.FC = () => {
     setShowKeyModal(false);
   };
 
+  const liveCount = allMatches.filter(m => m.status === 'LIVE').length;
+
   const navItems = [
+    { href: '/live', label: 'LIVE', icon: Radio, isLive: true },
     { href: '/', label: 'Tổng quan', icon: BarChart3 },
     { href: '/competition', label: 'BXH & Giải đấu', icon: Trophy },
     { href: '/team', label: 'Phân tích Đội bóng', icon: Users },
-    { href: '/match', label: 'Match Center & Live', icon: Swords },
+    { href: '/match', label: 'Match Center', icon: Swords },
     { href: '/betting', label: 'Odds & Kèo Châu Á', icon: Calculator },
     { href: '/etl', label: 'ETL & Quota Monitor', icon: Database },
   ];
@@ -202,22 +205,48 @@ export const Sidebar: React.FC = () => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
+              const isLiveItem = item.href === '/live';
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all relative group ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all relative group ${
                     isActive
-                      ? 'bg-gradient-to-r from-emerald-500/20 to-slate-900 text-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/5'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 border border-transparent'
+                      ? isLiveItem
+                        ? 'bg-gradient-to-r from-red-500/20 to-slate-900 text-red-400 border border-red-500/30 shadow-md shadow-red-500/10'
+                        : 'bg-gradient-to-r from-emerald-500/20 to-slate-900 text-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/5'
+                      : isLiveItem && liveCount > 0
+                        ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 border border-transparent'
                   }`}
                 >
-                  {isActive && (
-                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full"></span>
+                  <div className="flex items-center gap-3">
+                    {isActive && (
+                      <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${
+                        isLiveItem ? 'bg-red-400' : 'bg-emerald-400'
+                      }`}></span>
+                    )}
+                    <Icon className={`w-4 h-4 ${
+                      isActive 
+                        ? isLiveItem ? 'text-red-400' : 'text-emerald-400'
+                        : isLiveItem && liveCount > 0
+                          ? 'text-red-400 animate-pulse'
+                          : 'text-slate-400 group-hover:text-slate-200'
+                    }`} />
+                    <span className={isLiveItem ? 'font-black tracking-wider' : ''}>{item.label}</span>
+                  </div>
+
+                  {isLiveItem && (
+                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 ${
+                      liveCount > 0
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${liveCount > 0 ? 'bg-red-400 animate-ping' : 'bg-slate-500'}`}></span>
+                      <span>{liveCount > 0 ? `${liveCount}` : '0'}</span>
+                    </span>
                   )}
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
-                  <span>{item.label}</span>
                 </Link>
               );
             })}
