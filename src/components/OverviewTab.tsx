@@ -1,55 +1,27 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Match, LeagueCode } from '@/types/football';
 import { calculateKPIMetrics } from '@/utils/analyticsCalculations';
-import { getLiveMinute } from '@/utils/matchTime';
 import { COMPETITIONS } from '@/constants/competitions';
-import { TeamLogo } from '@/components/TeamLogo';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { 
   Trophy, Target, Flame, Shield, Flag, 
-  Percent, TrendingUp, Home, Scale, PlaneLanding, Radio, Info, Calendar
+  Percent, TrendingUp, Home, Scale, PlaneLanding
 } from 'lucide-react';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-
-const formatDateOnly = (dateStr?: string) => {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-    const weekday = days[d.getDay()];
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${weekday}, ${day}/${month}/${year}`;
-  } catch {
-    return dateStr || '';
-  }
-};
-
-const LEAGUE_DISPLAY_ORDER: Record<string, number> = {
-  PL: 1,
-  LL: 2,
-  SA: 3,
-  BL: 4,
-  L1: 5,
-  UCL: 6
-};
 
 interface OverviewTabProps {
   matches: Match[];
   allMatches?: Match[];
   selectedLeague: LeagueCode | 'ALL';
-  onSelectMatch: (matchId: string) => void;
+  onSelectMatch?: (matchId: string) => void;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   matches,
   allMatches = [],
   selectedLeague,
-  onSelectMatch
 }) => {
   const datasetForComparison = allMatches.length > 0 ? allMatches : matches;
   const filteredMatches = selectedLeague === 'ALL'
@@ -58,49 +30,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const selectedComp = COMPETITIONS.find(c => c.id === selectedLeague);
   const kpi = calculateKPIMetrics(filteredMatches);
-
-  // Filter and stably sort LIVE matches: PL -> LL -> SA -> BL -> L1 -> UCL, then by date and id
-  const liveMatches = useMemo(() => {
-    return [...filteredMatches]
-      .filter(m => m.status === 'LIVE')
-      .sort((a, b) => {
-        const orderA = LEAGUE_DISPLAY_ORDER[a.leagueId] ?? 99;
-        const orderB = LEAGUE_DISPLAY_ORDER[b.leagueId] ?? 99;
-        if (orderA !== orderB) return orderA - orderB;
-
-        const timeA = new Date(a.date).getTime() || 0;
-        const timeB = new Date(b.date).getTime() || 0;
-        if (timeA !== timeB) return timeA - timeB;
-
-        return String(a.id).localeCompare(String(b.id));
-      });
-  }, [filteredMatches]);
-
-  // Group live matches by league according to official order (PL, LL, SA, BL, L1, UCL)
-  const liveMatchesByLeague = useMemo(() => {
-    const groups: { comp: { id: string; name: string; flag: string }; matches: Match[] }[] = [];
-    
-    for (const comp of COMPETITIONS) {
-      const compMatches = liveMatches.filter(m => m.leagueId === comp.id);
-      if (compMatches.length > 0) {
-        groups.push({
-          comp: { id: comp.id, name: comp.name, flag: comp.flag },
-          matches: compMatches
-        });
-      }
-    }
-
-    const knownIds = new Set(COMPETITIONS.map(c => c.id));
-    const otherMatches = liveMatches.filter(m => !knownIds.has(m.leagueId as any));
-    if (otherMatches.length > 0) {
-      groups.push({
-        comp: { id: 'OTHER', name: 'Giải Đấu Khác', flag: '⚽' },
-        matches: otherMatches
-      });
-    }
-
-    return groups;
-  }, [liveMatches]);
 
   // Prepare chart data comparing leagues using full dataset across all leagues
   const leagueComparisonData = COMPETITIONS.map(comp => {
@@ -120,111 +49,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Live Matches Ticker Banner */}
-      {liveMatches.length > 0 ? (
-        <ScrollReveal direction="up" delay={0}>
-          <div className="bg-gradient-to-r from-red-950/60 via-slate-900 to-slate-900 border border-red-500/30 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden space-y-4">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <div className="flex items-center justify-between border-b border-red-500/20 pb-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <Radio className="w-4 h-4 text-red-400 animate-pulse" />
-                  <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                    {liveMatches.length} Trận Đấu Trực Tiếp
-                  </span>
-                </div>
-              </div>
-
-              <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">Goal API Real-time Sync</span>
-            </div>
-
-            {/* Sub-sections partitioned by league */}
-            <div className="space-y-5">
-              {liveMatchesByLeague.map(({ comp, matches: groupMatches }) => (
-                <div key={comp.id} className="space-y-2.5">
-                  {/* League sub-header */}
-                  <div className="flex items-center gap-2 pt-1 first:pt-0">
-                    <span className="text-base leading-none">{comp.flag}</span>
-                    <span className="text-xs font-bold text-slate-200 tracking-wide uppercase font-mono">
-                      {comp.name}
-                    </span>
-                    <div className="flex-1 h-[1px] bg-red-500/20 ml-2"></div>
-                  </div>
-
-                  {/* Matches grid for this league */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                    {groupMatches.map((liveMatch) => (
-                      <div 
-                        key={liveMatch.id} 
-                        onClick={() => onSelectMatch(liveMatch.id)}
-                        className="bg-slate-950/80 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 hover:border-red-500/50 transition-all cursor-pointer group"
-                      >
-                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2 gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="bg-slate-900 px-2 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-800">
-                              {liveMatch.round}
-                            </span>
-                            {liveMatch.date && (
-                              <span 
-                                suppressHydrationWarning
-                                className="text-[11px] text-slate-400 flex items-center gap-1 font-medium font-mono"
-                              >
-                                <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
-                                <span>{formatDateOnly(liveMatch.date)}</span>
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-red-400 font-bold text-xs animate-pulse font-mono shrink-0">
-                            {getLiveMinute(liveMatch)}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-3 items-center text-center my-2 gap-1">
-                          <div className="flex items-center gap-1.5 justify-end overflow-hidden">
-                            <span className="font-bold text-white text-xs sm:text-sm truncate">{liveMatch.homeTeam.shortName || liveMatch.homeTeam.name}</span>
-                            <TeamLogo logo={liveMatch.homeTeam.logo} name={liveMatch.homeTeam.name} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-                          </div>
-
-                          <div className="text-lg sm:text-xl font-black text-white font-mono">
-                            {liveMatch.homeScore} - {liveMatch.awayScore}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 justify-start overflow-hidden">
-                            <TeamLogo logo={liveMatch.awayTeam.logo} name={liveMatch.awayTeam.name} className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-                            <span className="font-bold text-white text-xs sm:text-sm truncate">{liveMatch.awayTeam.shortName || liveMatch.awayTeam.name}</span>
-                          </div>
-                        </div>
-
-                        <div className="text-right mt-2">
-                          <span className="text-[11px] text-red-400 group-hover:underline font-medium">
-                            Xem Match Center →
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </ScrollReveal>
-      ) : (
-        <ScrollReveal direction="up" delay={0}>
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300">
-            <div className="flex items-center gap-2.5">
-              <Info className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                <strong>LIVE Connected:</strong> Hiện không có trận đấu nào đang diễn ra trực tiếp.
-              </span>
-            </div>
-          </div>
-        </ScrollReveal>
-      )}
 
       {/* KPI Cards Grid */}
       <ScrollReveal direction="up" delay={50} className="space-y-3">
