@@ -50,8 +50,8 @@ export const Sidebar: React.FC = () => {
   const liveCount = allMatches.filter(m => m.status === 'LIVE').length;
 
   const navItems = [
-    { href: '/live', label: 'LIVE', icon: Radio, isLive: true },
-    { href: '/', label: 'Tổng quan', icon: BarChart3 },
+    { href: '/', label: 'LIVE', icon: Radio, isLive: true },
+    { href: '/overview', label: 'Tổng quan', icon: BarChart3 },
     { href: '/competition', label: 'BXH & Giải đấu', icon: Trophy },
     { href: '/team', label: 'Phân tích Đội bóng', icon: Users },
     { href: '/match', label: 'Match Center', icon: Swords },
@@ -60,7 +60,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   // Get current active tab label for header
-  const activeNavItem = navItems.find(item => item.href === pathname) || navItems[0];
+  const activeNavItem = navItems.find(item => item.href === pathname || (item.href === '/' && pathname === '/live')) || navItems[0];
 
   return (
     <>
@@ -204,8 +204,8 @@ export const Sidebar: React.FC = () => {
             </span>
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
-              const isLiveItem = item.href === '/live';
+              const isActive = pathname === item.href || (item.href === '/' && pathname === '/live');
+              const isLiveItem = Boolean(item.isLive);
               return (
                 <Link
                   key={item.href}
