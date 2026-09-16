@@ -148,7 +148,7 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
                   <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500"></span>
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide flex items-center gap-2">
-                  TRẬN ĐẤU TRỰC TIẾP <span className="text-red-400 font-mono">LIVE</span>
+                  TRỰC TIẾP <span className="text-red-400 font-mono">LIVE</span>
                 </h1>
               </div>
               <p className="text-xs sm:text-sm text-slate-300">
@@ -159,7 +159,7 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
             <div className="flex items-center gap-3 self-start md:self-center">
               <div className="px-3 py-1.5 bg-slate-950/80 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-400 font-mono font-bold">
                 <Radio className="w-4 h-4 text-red-400 animate-pulse" />
-                <span>{liveMatches.length} TRẬN ĐANG ĐÁ</span>
+                <span>{liveMatches.length} TRẬN LIVE</span>
               </div>
               <div className="px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-slate-400 font-mono hidden sm:flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-emerald-400" />
@@ -229,7 +229,7 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
                         {comp.name}
                       </h2>
                       <span className="text-[11px] text-slate-400">
-                        {groupMatches.length} trận đấu đang diễn ra trực tiếp
+                        {groupMatches.length} trận đấu trực tiếp
                       </span>
                     </div>
                   </div>
