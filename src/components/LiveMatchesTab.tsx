@@ -270,34 +270,37 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
                         </span>
                       </div>
 
-                      {/* Card Center: Home Team, Score, Away Team */}
-                      <div className="grid grid-cols-3 items-center text-center py-2 gap-2">
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center py-2.5 gap-2 sm:gap-4 max-w-full">
                         {/* Home Team */}
-                        <div className="flex flex-col sm:flex-row items-center justify-end gap-2 overflow-hidden">
+                        <div className="flex items-center justify-end gap-2 sm:gap-2.5 min-w-0">
                           <span className="font-bold text-white text-xs sm:text-sm text-right truncate group-hover:text-red-300 transition-colors">
                             {liveMatch.homeTeam.shortName || liveMatch.homeTeam.name}
                           </span>
-                          <TeamLogo logo={liveMatch.homeTeam.logo} name={liveMatch.homeTeam.name} className="w-7 h-7 sm:w-8 sm:h-8 shrink-0" />
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shrink-0">
+                            <TeamLogo logo={liveMatch.homeTeam.logo} name={liveMatch.homeTeam.name} className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+                          </div>
                         </div>
 
                         {/* Score */}
-                        <div className="flex flex-col items-center justify-center">
-                          <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight group-hover:scale-105 transition-transform">
+                        <div className="flex flex-col items-center justify-center shrink-0 px-2 sm:px-3">
+                          <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight group-hover:scale-105 transition-transform whitespace-nowrap">
                             {liveMatch.homeScore} - {liveMatch.awayScore}
                           </div>
                           {liveMatch.elapsedTime && (
-                            <span className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">
                               Hiệp {liveMatch.elapsedTime > 45 ? '2' : '1'}
                             </span>
                           )}
                         </div>
 
                         {/* Away Team */}
-                        <div className="flex flex-col sm:flex-row-reverse items-center justify-start gap-2 overflow-hidden">
+                        <div className="flex items-center justify-start gap-2 sm:gap-2.5 min-w-0">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shrink-0">
+                            <TeamLogo logo={liveMatch.awayTeam.logo} name={liveMatch.awayTeam.name} className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+                          </div>
                           <span className="font-bold text-white text-xs sm:text-sm text-left truncate group-hover:text-red-300 transition-colors">
                             {liveMatch.awayTeam.shortName || liveMatch.awayTeam.name}
                           </span>
-                          <TeamLogo logo={liveMatch.awayTeam.logo} name={liveMatch.awayTeam.name} className="w-7 h-7 sm:w-8 sm:h-8 shrink-0" />
                         </div>
                       </div>
 

@@ -196,15 +196,15 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
           )}
         </div>
 
-        {/* Score Display - Perfectly Balanced with Team Logos */}
+        {/* Score Display - Perfectly Balanced with Team Logos & Responsive Team Names */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center my-1 sm:my-3 gap-2 sm:gap-6 max-w-4xl mx-auto">
           {/* Home Team */}
-          <div className="flex items-center justify-end gap-2 sm:gap-3.5 min-w-0">
-            <span className="text-xs sm:text-lg md:text-xl font-black text-white text-right truncate">
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-1.5 sm:gap-3.5 min-w-0">
+            <span className="order-2 sm:order-1 text-xs sm:text-lg md:text-xl font-bold sm:font-black text-white text-center sm:text-right leading-tight break-words line-clamp-2 sm:line-clamp-none min-h-[28px] sm:min-h-0 w-full sm:w-auto">
               {homeTeam.name}
             </span>
-            <div className="p-1.5 sm:p-2.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-md shrink-0 flex items-center justify-center">
-              <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-8 h-8 sm:w-14 sm:h-14 object-contain" />
+            <div className="order-1 sm:order-2 p-1.5 sm:p-2.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-md shrink-0 flex items-center justify-center">
+              <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-9 h-9 sm:w-14 sm:h-14 object-contain" />
             </div>
           </div>
 
@@ -227,7 +227,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             {activeMatch.date && (
               <span 
                 suppressHydrationWarning
-                className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400 font-medium font-mono text-center whitespace-nowrap"
+                className="flex items-center justify-center gap-1 text-[9px] sm:text-xs text-slate-400 font-medium font-mono text-center whitespace-nowrap"
               >
                 <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
                 <span>{formatMatchDateTime(activeMatch.date)}</span>
@@ -236,11 +236,11 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
           </div>
 
           {/* Away Team */}
-          <div className="flex items-center justify-start gap-2 sm:gap-3.5 min-w-0">
-            <div className="p-1.5 sm:p-2.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-md shrink-0 flex items-center justify-center">
-              <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-8 h-8 sm:w-14 sm:h-14 object-contain" />
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-3.5 min-w-0">
+            <div className="order-1 p-1.5 sm:p-2.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-md shrink-0 flex items-center justify-center">
+              <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-9 h-9 sm:w-14 sm:h-14 object-contain" />
             </div>
-            <span className="text-xs sm:text-lg md:text-xl font-black text-white text-left truncate">
+            <span className="order-2 text-xs sm:text-lg md:text-xl font-bold sm:font-black text-white text-center sm:text-left leading-tight break-words line-clamp-2 sm:line-clamp-none min-h-[28px] sm:min-h-0 w-full sm:w-auto">
               {awayTeam.name}
             </span>
           </div>
@@ -253,7 +253,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Thống Kê Chi Tiết Trận Đấu (Match Statistics)</span>
+              <span>Thống Kê Chi Tiết</span>
             </h3>
 
             {isStatsMissing && (
@@ -342,7 +342,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Swords className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Diễn Biến Chính Trận Đấu (Match Timeline)</span>
+                <span>Diễn Biến Chính</span>
               </h3>
 
               {isStatsMissing && (
