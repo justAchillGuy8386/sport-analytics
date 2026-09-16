@@ -4,6 +4,8 @@ Nền tảng phân tích dữ liệu bóng đá chuyên sâu cho 6 giải đấu
 
 Được xây dựng bằng **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, **Supabase (PostgreSQL)**, **Goal API (goal-api.com)** và **Cron Automation**.
 
+🌐 **Trải nghiệm trực tiếp (Live Demo)**: [https://sport-analytics-virid.vercel.app](https://sport-analytics-virid.vercel.app)
+
 ---
 
 ## 🌟 Tính Năng Nổi Bật
@@ -49,14 +51,15 @@ Nền tảng phân tích dữ liệu bóng đá chuyên sâu cho 6 giải đấu
 
 ## 🖥️ Các Phân Hệ Giao Diện & Ứng Dụng
 
-| Trang | Chức Năng Chính |
-| :--- | :--- |
-| **Tổng Quan (Overview)** | 12 thẻ KPI tổng quan, biểu đồ so sánh 6 giải đấu (bàn thắng, góc, BTTS), banner thông tin trận LIVE thời gian thực. |
-| **BXH & Giải Đấu (Competition)** | Bảng xếp hạng chi tiết (vị trí, trận đã đá, hiệu số, điểm số, form 5 trận) của 6 giải đấu lớn, tự động đồng bộ theo bộ lọc giải ở Sidebar. |
-| **Phân Tích Đội Bóng (Team Analytics)** | Thống kê chuyên sâu từng CLB: tỷ lệ thắng sân nhà/sân khách, số trận sạch lưới, hiệu suất bàn thắng theo giải đấu được chọn. |
-| **Match Center & Live** | Chi tiết từng trận: tỉ số, kiểm soát bóng, số cú dứt điểm, sút trúng đích, phạt góc, thẻ phạt, timeline bàn thắng/thay người, đội hình thi đấu. |
-| **Odds & Kèo Châu Á (Betting Analytics)** | Máy tính quyết toán Kèo Châu Á (Asian Handicap) và Kèo Tài Xỉu (Over/Under) chuẩn quốc tế (Win, Half Win, Push, Half Loss, Loss). |
-| **ETL & Quota Monitor** | Bảng giám sát hạn mức Goal API hàng ngày (1.000 req/ngày), nút kích hoạt nạp dữ liệu thủ công vào Supabase tức thì. |
+| Trang | Đường Dẫn | Chức Năng Chính |
+| :--- | :--- | :--- |
+| **Trực Tiếp (LIVE)** | `/` | Theo dõi tỷ số và diễn biến trực tiếp các trận đấu đang diễn ra từ 6 giải đấu, phân nhóm theo thứ tự giải, bộ lọc giải đấu và lịch thi đấu tiếp theo. |
+| **Tổng Quan (Overview)** | `/overview` | 12 thẻ KPI tổng quan, biểu đồ so sánh 6 giải đấu (bàn thắng, góc, BTTS), phân tích chuyên sâu hiệu suất. |
+| **BXH & Giải Đấu (Competition)** | `/competition` | Bảng xếp hạng chi tiết (vị trí, trận đã đá, hiệu số, điểm số, form 5 trận) của 6 giải đấu lớn, tự động đồng bộ theo bộ lọc giải ở Sidebar. |
+| **Phân Tích Đội Bóng (Team Analytics)** | `/team` | Thống kê chuyên sâu từng CLB: tỷ lệ thắng sân nhà/sân khách, số trận sạch lưới, hiệu suất bàn thắng theo giải đấu được chọn. |
+| **Match Center** | `/match` | Chi tiết từng trận: tỉ số, kiểm soát bóng, số cú dứt điểm, sút trúng đích, phạt góc, thẻ phạt, timeline bàn thắng/thay người, đội hình thi đấu. |
+| **Odds & Kèo Châu Á (Betting Analytics)** | `/betting` | Máy tính quyết toán Kèo Châu Á (Asian Handicap) và Kèo Tài Xỉu (Over/Under) chuẩn quốc tế (Win, Half Win, Push, Half Loss, Loss). |
+| **ETL & Quota Monitor** | `/etl` | Bảng giám sát hạn mức Goal API hàng ngày (1.000 req/ngày), nút kích hoạt nạp dữ liệu thủ công vào Supabase tức thì. |
 
 ---
 
@@ -154,6 +157,8 @@ npm run build
 ```
 
 Mở trình duyệt và truy cập: `http://localhost:3000`
+
+Hoặc trải nghiệm phiên bản đã triển khai trực tiếp trên môi trường Production tại: **[https://sport-analytics-virid.vercel.app](https://sport-analytics-virid.vercel.app)**
 
 ---
 
