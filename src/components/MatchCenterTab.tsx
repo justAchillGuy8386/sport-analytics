@@ -47,6 +47,9 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
   matches,
   selectedMatchId
 }) => {
+  const { updateMatch } = useFootball();
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const matchDataList = matches || [];
 
   const [activeMatchId, setActiveMatchId] = useState<string>(
@@ -58,30 +61,26 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     if (selectedMatchId && matchDataList.some(m => m.id === selectedMatchId)) {
       setActiveMatchId(selectedMatchId);
     }
-  }, [selectedMatchId]);
+  }, [selectedMatchId, matchDataList]);
 
   // Ensure activeMatchId is valid when match list loads/updates
   useEffect(() => {
     if (matchDataList.length > 0 && !matchDataList.some(m => m.id === activeMatchId)) {
       setActiveMatchId(matchDataList[0].id);
     }
-  }, [matches]);
+  }, [matches, activeMatchId, matchDataList]);
 
   if (!matches || matches.length === 0) {
     return (
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center text-slate-400 space-y-3">
         <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
         <p className="text-sm font-medium">Hiện không có trận đấu nào được chọn.</p>
-        <p className="text-xs text-slate-500">Vui lòng quay lại Tổng quan hoặc chọn bộ lọc giải đấu ở thanh điều hướng bên trái.</p>
-      </div>
+        </div>
     );
   }
 
   const activeMatch = matchDataList.find(m => m.id === activeMatchId) || matchDataList[0];
   const { homeTeam, awayTeam, homeScore, awayScore, stats, events, lineups } = activeMatch;
-
-  const { updateMatch } = useFootball();
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const defaultTeamStats = {
     possession: 50,
@@ -155,98 +154,93 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
 
       {/* Match Header Scoreboard */}
       <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden animate-fade-in-up animation-delay-100">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 mb-4 sm:mb-6 border-b border-slate-800/80 pb-3 gap-2">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded font-bold font-mono text-[11px]">
+        {/* Match Top Bar: League, Round, Venue locked to left */}
+        <div className="flex items-center justify-between text-xs text-slate-400 mb-3 sm:mb-4 border-b border-slate-800/80 pb-2.5 sm:pb-3 gap-2 overflow-hidden">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 overflow-hidden">
+            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-bold font-mono text-[10px] sm:text-[11px] shrink-0">
               {activeMatch.leagueId} • {activeMatch.season}
             </span>
-            <span className="text-[11px] sm:text-xs font-medium text-slate-300">{activeMatch.round}</span>
+            <span className="text-[10px] sm:text-xs font-medium text-slate-300 shrink-0">{activeMatch.round}</span>
+            {activeMatch.venue && (
+              <span className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400 truncate min-w-0">
+                <span className="text-slate-600 shrink-0">•</span>
+                <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                <span className="truncate">{activeMatch.venue}</span>
+              </span>
+            )}
+          </div>
+
+          {activeMatch.referee && (
+            <span className="hidden sm:flex items-center gap-1 text-[11px] sm:text-xs text-slate-500 shrink-0">
+              <User className="w-3 h-3 text-slate-500 shrink-0" />
+              <span className="truncate max-w-[150px]">{activeMatch.referee}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Status / LIVE Badge - Directly below the divider line on the left */}
+        <div className="flex items-center justify-between pt-0.5 pb-1">
+          {activeMatch.status === 'LIVE' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] sm:text-xs font-bold animate-pulse font-mono shadow-sm shadow-red-500/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
+              <span>LIVE • {getLiveMinute(activeMatch)}</span>
+            </span>
+          ) : activeMatch.status === 'FINISHED' ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] sm:text-xs font-semibold font-mono">
+              FT
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] sm:text-xs font-semibold font-mono">
+              SẮP ĐẤU
+            </span>
+          )}
+        </div>
+
+        {/* Score Display - Perfectly Balanced with Team Logos */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center my-1 sm:my-3 gap-2 sm:gap-6 max-w-4xl mx-auto">
+          {/* Home Team */}
+          <div className="flex items-center justify-end gap-2 sm:gap-3.5 min-w-0">
+            <span className="text-xs sm:text-lg md:text-xl font-black text-white text-right truncate">
+              {homeTeam.name}
+            </span>
+            <div className="p-1.5 sm:p-2.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-md shrink-0 flex items-center justify-center">
+              <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-8 h-8 sm:w-14 sm:h-14 object-contain" />
+            </div>
+          </div>
+
+          {/* Center Column: Score + Date & Time */}
+          <div className="flex flex-col items-center justify-center shrink-0 gap-1 sm:gap-1.5 px-1 sm:px-3">
+            {/* Score Box */}
+            {activeMatch.status === 'FINISHED' || activeMatch.status === 'LIVE' ? (
+              <div className="bg-slate-950/90 px-3.5 sm:px-6 py-1.5 sm:py-2 rounded-2xl border border-slate-800/80 shadow-inner flex items-center gap-2 sm:gap-3.5 font-mono font-black text-white text-2xl sm:text-4xl md:text-5xl tracking-wider">
+                <span>{homeScore}</span>
+                <span className="text-emerald-500 font-bold text-lg sm:text-2xl">-</span>
+                <span>{awayScore}</span>
+              </div>
+            ) : (
+              <div className="bg-slate-950/90 px-4 sm:px-6 py-1.5 sm:py-2 rounded-2xl border border-slate-800/80 font-mono font-bold text-slate-400 text-base sm:text-xl">
+                VS
+              </div>
+            )}
+
+            {/* Thời gian + ngày tháng chính giữa dưới tỉ số */}
             {activeMatch.date && (
               <span 
                 suppressHydrationWarning
-                className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-emerald-300 bg-slate-950/80 border border-slate-800 px-2.5 py-0.5 rounded-lg shadow-inner"
+                className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400 font-medium font-mono text-center whitespace-nowrap"
               >
-                <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
                 <span>{formatMatchDateTime(activeMatch.date)}</span>
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] sm:text-xs">
-            {activeMatch.venue && (
-              <span className="flex items-center gap-1 truncate max-w-[150px] sm:max-w-none">
-                <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                {activeMatch.venue}
-              </span>
-            )}
-            {activeMatch.referee && (
-              <span className="flex items-center gap-1 truncate max-w-[150px] sm:max-w-none">
-                <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                {activeMatch.referee}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Score Display */}
-        <div className="grid grid-cols-3 items-center text-center my-3 sm:my-4 gap-2">
-          {/* Home Team */}
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-2 sm:gap-3 overflow-hidden">
-            <span className="text-xs sm:text-xl font-black text-white order-2 sm:order-1 truncate w-full sm:w-auto text-center sm:text-right">
-              {homeTeam.name}
-            </span>
-            <div className="p-2 sm:p-3 bg-slate-950 rounded-2xl border border-slate-800 order-1 sm:order-2 shrink-0">
-              <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-8 h-8 sm:w-14 sm:h-14" />
-            </div>
-          </div>
-
-          {/* Score & Status */}
-          <div className="flex flex-col items-center shrink-0">
-            {activeMatch.status === 'FINISHED' || activeMatch.status === 'LIVE' ? (
-              <div className="text-2xl sm:text-5xl font-black text-white font-mono tracking-wider flex items-center gap-1.5 sm:gap-3">
-                <span>{homeScore}</span>
-                <span className="text-emerald-500">-</span>
-                <span>{awayScore}</span>
-              </div>
-            ) : (
-              <div className="text-xl sm:text-2xl font-bold text-slate-400 font-mono">VS</div>
-            )}
-
-            <div className="mt-1.5 sm:mt-2 flex flex-col items-center gap-1.5">
-              {activeMatch.status === 'LIVE' ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] sm:text-xs font-bold animate-pulse">
-                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  LIVE • {getLiveMinute(activeMatch)}
-                </span>
-              ) : activeMatch.status === 'FINISHED' ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] sm:text-xs font-medium">
-                  Kết thúc (FT)
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] sm:text-xs font-medium">
-                  Sắp diễn ra
-                </span>
-              )}
-
-              {/* Match Kickoff Date & Time */}
-              {activeMatch.date && (
-                <span 
-                  suppressHydrationWarning
-                  className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 font-medium mt-0.5"
-                >
-                  <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span><strong className="text-slate-200 font-semibold">{formatMatchDateTime(activeMatch.date)}</strong></span>
-                </span>
-              )}
-            </div>
-          </div>
-
           {/* Away Team */}
-          <div className="flex flex-col sm:flex-row items-center justify-start gap-2 sm:gap-3 overflow-hidden">
-            <div className="p-2 sm:p-3 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
-              <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-8 h-8 sm:w-14 sm:h-14" />
+          <div className="flex items-center justify-start gap-2 sm:gap-3.5 min-w-0">
+            <div className="p-1.5 sm:p-2.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-md shrink-0 flex items-center justify-center">
+              <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-8 h-8 sm:w-14 sm:h-14 object-contain" />
             </div>
-            <span className="text-xs sm:text-xl font-black text-white truncate w-full sm:w-auto text-center sm:text-left">
+            <span className="text-xs sm:text-lg md:text-xl font-black text-white text-left truncate">
               {awayTeam.name}
             </span>
           </div>
