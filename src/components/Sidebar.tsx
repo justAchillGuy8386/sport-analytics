@@ -104,9 +104,9 @@ export const Sidebar: React.FC = () => {
         {/* Top Header - Always pinned at the top of the sidebar */}
         <div className="p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-slate-900 bg-slate-950">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20 shrink-0">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center overflow-hidden p-1">
+                <img src="/icon.svg" alt="Football Analytics Logo" className="w-full h-full object-contain" />
               </div>
             </div>
             <div>

@@ -18,6 +18,17 @@ export const metadata: Metadata = {
   title: 'Football Analytics Platform | Mùa Giải 2026/27',
   description: 'Nền tảng phân tích dữ liệu bóng đá 6 giải đấu hàng đầu châu Âu mùa 2026/27. Standings, Team Analytics, Match Center, Máy tính Kèo Châu Á & Smart Polling Pipeline.',
   keywords: ['Football Analytics', 'Premier League 2026/27', 'La Liga', 'UEFA Champions League', 'Asian Handicap Settlement', 'Goal API'],
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ]
+  }
 };
 
 export default function RootLayout({
@@ -43,9 +54,7 @@ export default function RootLayout({
               <footer className="border-t border-slate-900 bg-slate-950/80 py-6 text-xs text-slate-400 mt-auto">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
-                      FA
-                    </div>
+                    <img src="/icon.svg" alt="Football Analytics Logo" className="w-5 h-5 rounded object-contain shrink-0" />
                     <span className="font-bold text-white">Football Analytics Platform</span>
                     <span className="text-[10px] text-slate-500 font-mono">v1.0.0</span>
                   </div>
