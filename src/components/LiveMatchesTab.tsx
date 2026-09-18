@@ -151,9 +151,6 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
                   TRỰC TIẾP <span className="text-red-400 font-mono">LIVE</span>
                 </h1>
               </div>
-              <p className="text-xs sm:text-sm text-slate-300">
-                Theo dõi diễn biến và tỷ số trực tiếp thời gian thực từ 6 giải đấu hàng đầu Châu Âu
-              </p>
             </div>
 
             <div className="flex items-center gap-3 self-start md:self-center">
@@ -367,10 +364,10 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                 <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
                   <Clock className="w-4 h-4 text-cyan-400" />
-                  Trận Đấu Sắp Diễn Ra Tiếp Theo
+                  Sắp Diễn Ra
                 </h3>
                 <Link href="/match" className="text-xs text-cyan-400 hover:underline flex items-center gap-1 font-medium">
-                  <span>Xem tất cả</span>
+                  <span>Xem thêm</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
