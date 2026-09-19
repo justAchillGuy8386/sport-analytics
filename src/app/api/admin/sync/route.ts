@@ -49,6 +49,24 @@ export async function syncSingleFixture(fixtureId: string, apiKey?: string) {
   if (!keyToUse) return { success: false, message: 'Thiếu API Key' };
 
   const adminClient = getSupabaseAdmin();
+
+  // Check if fixture in DB is scheduled for the future
+  const { data: existingInDb } = await adminClient
+    .from('matches')
+    .select('date, status, home_team_name, away_team_name')
+    .eq('id', fixtureId)
+    .single();
+
+  if (existingInDb && existingInDb.date) {
+    const matchTime = new Date(existingInDb.date).getTime();
+    if (!isNaN(matchTime) && matchTime > Date.now()) {
+      return {
+        success: false,
+        message: `Trận đấu ${existingInDb.home_team_name} vs ${existingInDb.away_team_name} là lịch thi đấu trong tương lai (chưa diễn ra). Thống kê chi tiết chỉ có sau khi trận đấu bắt đầu.`
+      };
+    }
+  }
+
   const details = await fetchGoalFixtureDetails(fixtureId, keyToUse);
   if (!details) {
     return { success: false, message: 'Không thể lấy chi tiết trận đấu từ Goal API' };
@@ -57,6 +75,12 @@ export async function syncSingleFixture(fixtureId: string, apiKey?: string) {
   const leagueEntry = Object.entries(GOAL_LEAGUE_MAP).find(([, obj]) => obj.id === details.leagueId);
   const leagueCode = (leagueEntry ? leagueEntry[0] : 'PL') as LeagueCode;
   const mapped = mapGoalFixtureToMatch(details, leagueCode);
+
+  const hasStats = mapped.stats && (
+    mapped.stats.home.shots > 0 || mapped.stats.away.shots > 0 ||
+    mapped.stats.home.corners > 0 || mapped.stats.away.corners > 0 ||
+    (mapped.events && mapped.events.length > 0)
+  );
 
   const row = {
     id: String(mapped.id),
@@ -86,7 +110,13 @@ export async function syncSingleFixture(fixtureId: string, apiKey?: string) {
     return { success: false, message: error.message };
   }
 
-  return { success: true, match: mapped, message: 'Đã cập nhật chi tiết trận đấu thành công!' };
+  return {
+    success: true,
+    match: mapped,
+    message: hasStats 
+      ? 'Đã cập nhật chi tiết trận đấu thành công!' 
+      : 'Goal API hiện chưa có dữ liệu chỉ số chi tiết cho trận này.'
+  };
 }
 
 async function performSync(apiKey?: string) {
@@ -137,7 +167,21 @@ async function performSync(apiKey?: string) {
       if (resResults.ok) {
         const resJson = await resResults.json();
         if (Array.isArray(resJson.data) && resJson.data.length > 0) {
-          const resultIds = resJson.data.map((r: any) => String(r.id)).filter(Boolean);
+          // Filter ONLY matches that have already kicked off (not future dates)
+          const nowMs = Date.now();
+          const pastResults = resJson.data.filter((r: any) => {
+            const k = r.kickoffUtc || (r.matchDate ? `${r.matchDate}T${r.matchTime || '00:00'}:00.000Z` : null);
+            return !k || new Date(k).getTime() <= nowMs;
+          });
+
+          // Sort by kickoff date DESCENDING so the most recently completed matches come FIRST!
+          pastResults.sort((a: any, b: any) => {
+            const timeA = new Date(a.kickoffUtc || a.matchDate || 0).getTime();
+            const timeB = new Date(b.kickoffUtc || b.matchDate || 0).getTime();
+            return timeB - timeA;
+          });
+
+          const resultIds = pastResults.map((r: any) => String(r.id)).filter(Boolean);
           const { data: existingInDb } = await adminClient
             .from('matches')
             .select('id, stats, events')
@@ -151,8 +195,8 @@ async function performSync(apiKey?: string) {
           let detailsFetchedInLeague = 0;
           const MAX_DETAILS_PER_LEAGUE = 5;
 
-          for (let i = 0; i < resJson.data.length; i++) {
-            const raw = resJson.data[i];
+          for (let i = 0; i < pastResults.length; i++) {
+            const raw = pastResults[i];
             const existing = existingMap.get(String(raw.id));
             const hasDetailedStats = checkHasFullDetailedStats(existing, raw);
 

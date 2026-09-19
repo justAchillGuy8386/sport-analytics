@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Match } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { getLiveMinute } from '@/utils/matchTime';
@@ -49,8 +49,43 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
 }) => {
   const { updateMatch } = useFootball();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
 
-  const matchDataList = matches || [];
+  // Priority Sort: LIVE -> Recently finished (last 48h) -> Near upcoming (next 48h) -> older finished -> distant fixtures
+  const matchDataList = useMemo(() => {
+    if (!matches || matches.length === 0) return [];
+    const now = Date.now();
+    const getMatchPriority = (status: string, time: number) => {
+      if (status === 'LIVE') return 100;
+      if (status === 'FINISHED' && (now - time) >= 0 && (now - time) <= 48 * 3600 * 1000) return 90;
+      if (status === 'UPCOMING' && (time - now) >= 0 && (time - now) <= 48 * 3600 * 1000) return 80;
+      if (status === 'FINISHED' && (now - time) >= 0 && (now - time) <= 14 * 86400 * 1000) return 70;
+      if (status === 'UPCOMING' && (time - now) >= 0 && (time - now) <= 14 * 86400 * 1000) return 60;
+      if (status === 'FINISHED') return 50;
+      return 10;
+    };
+
+    return [...matches].sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      const prioA = getMatchPriority(a.status, timeA);
+      const prioB = getMatchPriority(b.status, timeB);
+
+      if (prioA !== prioB) {
+        return prioB - prioA;
+      }
+
+      if (a.status === 'FINISHED' && b.status === 'FINISHED') {
+        return timeB - timeA;
+      }
+
+      if (a.status === 'UPCOMING' && b.status === 'UPCOMING') {
+        return timeA - timeB;
+      }
+
+      return timeB - timeA;
+    });
+  }, [matches]);
 
   const [activeMatchId, setActiveMatchId] = useState<string>(
     selectedMatchId || matchDataList[0]?.id || ''
@@ -58,28 +93,28 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
 
   // Sync activeMatchId ONLY when parent explicitly changes selectedMatchId prop
   useEffect(() => {
-    if (selectedMatchId && matchDataList.some(m => m.id === selectedMatchId)) {
+    if (selectedMatchId && matchDataList.some((m: Match) => m.id === selectedMatchId)) {
       setActiveMatchId(selectedMatchId);
     }
   }, [selectedMatchId, matchDataList]);
 
   // Ensure activeMatchId is valid when match list loads/updates
   useEffect(() => {
-    if (matchDataList.length > 0 && !matchDataList.some(m => m.id === activeMatchId)) {
+    if (matchDataList.length > 0 && !matchDataList.some((m: Match) => m.id === activeMatchId)) {
       setActiveMatchId(matchDataList[0].id);
     }
-  }, [matches, activeMatchId, matchDataList]);
+  }, [matchDataList, activeMatchId]);
 
   if (!matches || matches.length === 0) {
     return (
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center text-slate-400 space-y-3">
         <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
         <p className="text-sm font-medium">Hiện không có trận đấu nào được chọn.</p>
-        </div>
+      </div>
     );
   }
 
-  const activeMatch = matchDataList.find(m => m.id === activeMatchId) || matchDataList[0];
+  const activeMatch = matchDataList.find((m: Match) => m.id === activeMatchId) || matchDataList[0];
   const { homeTeam, awayTeam, homeScore, awayScore, stats, events, lineups } = activeMatch;
 
   const defaultTeamStats = {
@@ -99,25 +134,38 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     away: stats?.away || defaultTeamStats
   };
 
-  const isStatsMissing = activeMatch.status === 'FINISHED' && (
+  const isFutureMatch = new Date(activeMatch.date).getTime() > Date.now();
+
+  const isStatsMissing = !isFutureMatch && activeMatch.status === 'FINISHED' && (
     (safeStats.home.shots === 0 && safeStats.away.shots === 0 && safeStats.home.corners === 0 && safeStats.away.corners === 0) ||
     ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0) > 0 && 
-     (events || []).filter(e => e.type === 'goal').length < ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0)))
+     (events || []).filter((e: any) => e.type === 'goal').length < ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0)))
   );
 
   const handleSyncMatchDetails = async () => {
     if (isSyncing || !activeMatch?.id) return;
     setIsSyncing(true);
+    setSyncNotice(null);
     try {
       const res = await fetch(`/api/admin/sync?fixtureId=${activeMatch.id}`);
       const data = await res.json();
       if (data.success && data.match) {
         updateMatch(data.match);
+        const hasStats = (data.match.stats?.home?.shots ?? 0) > 0 || (data.match.events?.length ?? 0) > 0;
+        if (hasStats) {
+          setSyncNotice({ text: 'Đã cập nhật đầy đủ chỉ số và diễn biến thành công!', type: 'success' });
+        } else {
+          setSyncNotice({ text: 'Trận đấu này chưa có dữ liệu chi tiết từ nhà cung cấp Goal API.', type: 'info' });
+        }
+      } else {
+        setSyncNotice({ text: data.message || 'Không thể cập nhật chỉ số cho trận đấu này.', type: 'error' });
       }
     } catch (err) {
       console.error('Failed to sync match details:', err);
+      setSyncNotice({ text: 'Lỗi kết nối khi cập nhật dữ liệu.', type: 'error' });
     } finally {
       setIsSyncing(false);
+      setTimeout(() => setSyncNotice(null), 6000);
     }
   };
 
@@ -125,7 +173,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     <div className="space-y-6">
       {/* Match Selector Strip */}
       <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2 border-b border-slate-800 animate-fade-in-up">
-        {matchDataList.map(m => (
+        {matchDataList.map((m: Match) => (
           <button
             key={m.id}
             onClick={() => setActiveMatchId(m.id)}
@@ -136,7 +184,9 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5 font-semibold text-white">
-              {m.homeTeam.shortName || m.homeTeam.name} vs {m.awayTeam.shortName || m.awayTeam.name}
+              {m.homeTeam.shortName || m.homeTeam.name}
+              {(m.status === 'FINISHED' || m.status === 'LIVE') ? ` ${m.homeScore} - ${m.awayScore} ` : ' vs '}
+              {m.awayTeam.shortName || m.awayTeam.name}
             </span>
             {m.date && (
               <span className="text-[10px] text-slate-400 font-mono hidden sm:inline" suppressHydrationWarning>
@@ -269,6 +319,19 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             )}
           </div>
 
+          {syncNotice && (
+            <div className={`mb-4 px-3 py-2 rounded-xl text-xs flex items-center gap-2 border ${
+              syncNotice.type === 'success'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                : syncNotice.type === 'info'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+            }`}>
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{syncNotice.text}</span>
+            </div>
+          )}
+
           <div className="space-y-4 text-xs">
             {/* Possession */}
             <div>
@@ -375,7 +438,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
 
             <div className="space-y-3 relative before:absolute before:left-1/2 before:top-1 before:bottom-1 before:-translate-x-1/2 before:w-0.5 before:bg-slate-800">
               {events && events.length > 0 ? (
-                events.map((ev) => {
+                events.map((ev: any) => {
                   const isHomeEvent = 
                     ev.teamId === 'home' || 
                     ev.teamId === '1' || 

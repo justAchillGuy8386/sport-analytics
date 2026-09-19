@@ -246,31 +246,33 @@ export async function fetchRealStandings(apiKey?: string, leagueCode: LeagueCode
  * Map a Goal API fixture object to internal Match interface
  */
 export function mapGoalFixtureToMatch(f: any, leagueCode: LeagueCode): Match {
+  const kickoff = f.kickoffUtc || (f.matchDate ? `${f.matchDate}T${f.matchTime || '00:00'}:00.000Z` : new Date().toISOString());
+  const kickoffTime = new Date(kickoff).getTime();
+  const isFutureMatch = !isNaN(kickoffTime) && kickoffTime > Date.now();
+
   const statusRaw = (f.matchStatus || '').toUpperCase();
   let status: MatchStatus = 'UPCOMING';
   if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
-    status = 'FINISHED';
+    status = isFutureMatch ? 'UPCOMING' : 'FINISHED';
   } else if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
-    status = 'LIVE';
+    status = isFutureMatch ? 'UPCOMING' : 'LIVE';
   } else if (['POSTPONED', 'PST'].includes(statusRaw)) {
     status = 'POSTPONED';
   } else if (['CANCELLED', 'CANC', 'ABD'].includes(statusRaw)) {
     status = 'CANCELLED';
   }
 
-  const hScore = parseInt(f.homeTeamScore ?? f.homeTeamFtScore ?? '0', 10) || 0;
-  const aScore = parseInt(f.awayTeamScore ?? f.awayTeamFtScore ?? '0', 10) || 0;
+  const hScore = isFutureMatch ? 0 : (parseInt(f.homeTeamScore ?? f.homeTeamFtScore ?? '0', 10) || 0);
+  const aScore = isFutureMatch ? 0 : (parseInt(f.awayTeamScore ?? f.awayTeamFtScore ?? '0', 10) || 0);
 
-  const stats = f.statistics && f.statistics.length > 0
+  const stats = !isFutureMatch && f.statistics && f.statistics.length > 0
     ? parseGoalStats(f.statistics)
     : {
         home: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 },
         away: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 }
       };
 
-  const events = parseGoalEvents(f.events || [], f.cards || [], f.substitutions || []);
-
-  const kickoff = f.kickoffUtc || (f.matchDate ? `${f.matchDate}T${f.matchTime || '00:00'}:00.000Z` : new Date().toISOString());
+  const events = isFutureMatch ? [] : parseGoalEvents(f.events || [], f.cards || [], f.substitutions || []);
 
   return {
     id: f.id || f.apiId,

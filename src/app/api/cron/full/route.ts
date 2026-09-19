@@ -127,8 +127,22 @@ async function handleFullSync(request: Request) {
       if (resResults.ok) {
         const resJson = await resResults.json();
         if (Array.isArray(resJson.data) && resJson.data.length > 0) {
+          // Filter ONLY matches that have already kicked off (not future dates)
+          const nowMs = Date.now();
+          const pastResults = resJson.data.filter((r: any) => {
+            const k = r.kickoffUtc || (r.matchDate ? `${r.matchDate}T${r.matchTime || '00:00'}:00.000Z` : null);
+            return !k || new Date(k).getTime() <= nowMs;
+          });
+
+          // Sort by kickoff date DESCENDING so the most recently completed matches come FIRST!
+          pastResults.sort((a: any, b: any) => {
+            const timeA = new Date(a.kickoffUtc || a.matchDate || 0).getTime();
+            const timeB = new Date(b.kickoffUtc || b.matchDate || 0).getTime();
+            return timeB - timeA;
+          });
+
           // Smart Cache: Check existing matches in DB to avoid refetching details
-          const resultIds = resJson.data.map((r: any) => String(r.id)).filter(Boolean);
+          const resultIds = pastResults.map((r: any) => String(r.id)).filter(Boolean);
           const { data: existingInDb } = await adminClient
             .from('matches')
             .select('id, stats, events')
@@ -142,8 +156,8 @@ async function handleFullSync(request: Request) {
           let detailsFetchedInLeague = 0;
           const MAX_DETAILS_PER_LEAGUE = 5;
 
-          for (let i = 0; i < resJson.data.length; i++) {
-            const raw = resJson.data[i];
+          for (let i = 0; i < pastResults.length; i++) {
+            const raw = pastResults[i];
             const existing = existingMap.get(String(raw.id));
             const hasDetailedStats = checkHasFullDetailedStats(existing, raw);
 

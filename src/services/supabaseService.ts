@@ -10,6 +10,17 @@ import { calculateLiveElapsedNumber } from '@/utils/matchTime';
 export function normalizeMatchStatus(rawStatus: string, matchDate?: string): MatchStatus {
   if (!rawStatus) return 'UPCOMING';
   const s = rawStatus.toUpperCase().trim();
+
+  // If match date is in the future, it cannot be LIVE or FINISHED
+  if (matchDate) {
+    const matchTime = new Date(matchDate).getTime();
+    if (!isNaN(matchTime) && matchTime > Date.now()) {
+      if (['POSTPONED', 'PST', 'SUSP'].includes(s)) return 'POSTPONED';
+      if (['CANCELLED', 'CANC', 'ABD'].includes(s)) return 'CANCELLED';
+      return 'UPCOMING';
+    }
+  }
+
   const isLiveCode = ['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'BT', 'IN_PLAY', 'INT'].includes(s);
 
   if (isLiveCode) {
@@ -141,14 +152,23 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
 
     if (!data || !Array.isArray(data)) return [];
 
-    // Background auto-repair for stale LIVE matches in Supabase DB
+    const nowMs = Date.now();
     const staleLiveIds = data
       .filter((row: any) => {
         const s = (row.status || '').toUpperCase().trim();
         const isLiveCode = ['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'BT', 'IN_PLAY', 'INT'].includes(s);
         if (!isLiveCode) return false;
         const startTime = new Date(row.date).getTime();
-        return !isNaN(startTime) && (Date.now() - startTime) > 3 * 60 * 60 * 1000;
+        return !isNaN(startTime) && (nowMs - startTime) > 3 * 60 * 60 * 1000;
+      })
+      .map((row: any) => row.id);
+
+    const falseFinishedFutureIds = data
+      .filter((row: any) => {
+        const s = (row.status || '').toUpperCase().trim();
+        if (!['FINISHED', 'FT', 'AET', 'PEN'].includes(s)) return false;
+        const startTime = new Date(row.date).getTime();
+        return !isNaN(startTime) && startTime > nowMs;
       })
       .map((row: any) => row.id);
 
@@ -164,11 +184,40 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
         });
     }
 
+    if (falseFinishedFutureIds.length > 0) {
+      adminClient
+        .from('matches')
+        .update({
+          status: 'UPCOMING',
+          home_score: 0,
+          away_score: 0,
+          stats: {
+            home: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 },
+            away: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 }
+          },
+          events: [],
+          updated_at: new Date().toISOString()
+        })
+        .in('id', falseFinishedFutureIds)
+        .then(({ error }) => {
+          if (!error) {
+            console.log(`🔧 Auto-repaired ${falseFinishedFutureIds.length} future matches to UPCOMING directly in Supabase DB.`);
+          }
+        });
+    }
+
     const mappedMatches: Match[] = data.map((row: any) => {
-      const hScore = row.home_score ?? 0;
-      const aScore = row.away_score ?? 0;
-      const events = row.events || [];
-      const stats = ensureMatchStats(row.stats, hScore, aScore, events);
+      const matchStatus = normalizeMatchStatus(row.status, row.date);
+      const isFutureMatch = new Date(row.date).getTime() > nowMs;
+      const hScore = isFutureMatch ? 0 : (row.home_score ?? 0);
+      const aScore = isFutureMatch ? 0 : (row.away_score ?? 0);
+      const events = isFutureMatch ? [] : (row.events || []);
+      const stats = isFutureMatch 
+        ? {
+            home: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 },
+            away: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, offsides: 0, saves: 0 }
+          }
+        : ensureMatchStats(row.stats, hScore, aScore, events);
 
       return {
         id: String(row.id),
@@ -191,8 +240,8 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
         },
         homeScore: hScore,
         awayScore: aScore,
-        status: normalizeMatchStatus(row.status, row.date),
-        elapsedTime: normalizeMatchStatus(row.status, row.date) === 'LIVE'
+        status: matchStatus,
+        elapsedTime: matchStatus === 'LIVE'
           ? calculateLiveElapsedNumber(row.date, row.elapsed_time ?? 0)
           : (row.elapsed_time ?? 0),
         date: row.date,
@@ -206,11 +255,36 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
       };
     });
 
-    // Sort so LIVE matches are placed at the top
+    const getMatchPriority = (status: string, time: number) => {
+      if (status === 'LIVE') return 100;
+      if (status === 'FINISHED' && (nowMs - time) >= 0 && (nowMs - time) <= 48 * 3600 * 1000) return 90;
+      if (status === 'UPCOMING' && (time - nowMs) >= 0 && (time - nowMs) <= 48 * 3600 * 1000) return 80;
+      if (status === 'FINISHED' && (nowMs - time) >= 0 && (nowMs - time) <= 14 * 86400 * 1000) return 70;
+      if (status === 'UPCOMING' && (time - nowMs) >= 0 && (time - nowMs) <= 14 * 86400 * 1000) return 60;
+      if (status === 'FINISHED') return 50;
+      return 10;
+    };
+
     return mappedMatches.sort((a, b) => {
-      if (a.status === 'LIVE' && b.status !== 'LIVE') return -1;
-      if (a.status !== 'LIVE' && b.status === 'LIVE') return 1;
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      const prioA = getMatchPriority(a.status, timeA);
+      const prioB = getMatchPriority(b.status, timeB);
+
+      if (prioA !== prioB) {
+        return prioB - prioA;
+      }
+
+      // Inside same priority tier:
+      if (a.status === 'FINISHED' && b.status === 'FINISHED') {
+        return timeB - timeA; // Newest finished match first
+      }
+
+      if (a.status === 'UPCOMING' && b.status === 'UPCOMING') {
+        return timeA - timeB; // Closest upcoming kickoff first
+      }
+
+      return timeB - timeA;
     });
   } catch (err) {
     console.error('Failed to fetch from Supabase:', err);
