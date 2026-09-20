@@ -310,11 +310,11 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
               <button
                 onClick={handleSyncMatchDetails}
                 disabled={isSyncing}
-                title="Bấm để đồng bộ đầy đủ các chỉ số cú sút, phạt góc và diễn biến từ Goal API"
+                title="Bấm để đồng bộ các chỉ số trận đấu"
                 className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
               >
                 <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSyncing ? 'Đang cập nhật...' : 'Lấy đủ chỉ số trận này'}</span>
+                <span>{isSyncing ? 'Đang cập nhật...' : 'Lấy chỉ số trận đấu'}</span>
               </button>
             )}
           </div>
@@ -412,7 +412,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
                 <button
                   onClick={handleSyncMatchDetails}
                   disabled={isSyncing}
-                  title="Bấm để đồng bộ đầy đủ diễn biến bàn thắng, thẻ phạt từ Goal API"
+                  title="Bấm để đồng bộ đầy đủ diễn biến trận đấu"
                   className="text-[11px] font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
