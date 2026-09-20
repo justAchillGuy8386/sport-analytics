@@ -130,8 +130,62 @@ export const Sidebar: React.FC = () => {
           </button>
         </div>
 
-        {/* Scrollable Center Content - Smooth internal scrolling, doesn't bounce parent */}
+        {/* Scrollable Center Content - Smooth internal scrolling*/}
         <div className="p-4 sm:p-5 space-y-6 overflow-y-auto overscroll-contain flex-1 custom-scrollbar">
+        {/* Navigation Links */}
+          <div className="space-y-1 pt-2 border-t border-slate-900">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block mb-2">
+              Menu Điều Hướng
+            </span>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || (item.href === '/' && pathname === '/live');
+              const isLiveItem = Boolean(item.isLive);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all relative group ${
+                    isActive
+                      ? isLiveItem
+                        ? 'bg-gradient-to-r from-red-500/20 to-slate-900 text-red-400 border border-red-500/30 shadow-md shadow-red-500/10'
+                        : 'bg-gradient-to-r from-emerald-500/20 to-slate-900 text-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/5'
+                      : isLiveItem && liveCount > 0
+                        ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isActive && (
+                      <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${
+                        isLiveItem ? 'bg-red-400' : 'bg-emerald-400'
+                      }`}></span>
+                    )}
+                    <Icon className={`w-4 h-4 ${
+                      isActive 
+                        ? isLiveItem ? 'text-red-400' : 'text-emerald-400'
+                        : isLiveItem && liveCount > 0
+                          ? 'text-red-400 animate-pulse'
+                          : 'text-slate-400 group-hover:text-slate-200'
+                    }`} />
+                    <span className={isLiveItem ? 'font-black tracking-wider' : ''}>{item.label}</span>
+                  </div>
+
+                  {isLiveItem && (
+                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 ${
+                      liveCount > 0
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${liveCount > 0 ? 'bg-red-400 animate-ping' : 'bg-slate-500'}`}></span>
+                      <span>{liveCount > 0 ? `${liveCount}` : '0'}</span>
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
           {/* League Filter Component in Sidebar */}
           <div className="space-y-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
@@ -195,61 +249,6 @@ export const Sidebar: React.FC = () => {
                 );
               })}
             </div>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="space-y-1 pt-2 border-t border-slate-900">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block mb-2">
-              Menu Điều Hướng
-            </span>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href === '/' && pathname === '/live');
-              const isLiveItem = Boolean(item.isLive);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all relative group ${
-                    isActive
-                      ? isLiveItem
-                        ? 'bg-gradient-to-r from-red-500/20 to-slate-900 text-red-400 border border-red-500/30 shadow-md shadow-red-500/10'
-                        : 'bg-gradient-to-r from-emerald-500/20 to-slate-900 text-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/5'
-                      : isLiveItem && liveCount > 0
-                        ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20'
-                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {isActive && (
-                      <span className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full ${
-                        isLiveItem ? 'bg-red-400' : 'bg-emerald-400'
-                      }`}></span>
-                    )}
-                    <Icon className={`w-4 h-4 ${
-                      isActive 
-                        ? isLiveItem ? 'text-red-400' : 'text-emerald-400'
-                        : isLiveItem && liveCount > 0
-                          ? 'text-red-400 animate-pulse'
-                          : 'text-slate-400 group-hover:text-slate-200'
-                    }`} />
-                    <span className={isLiveItem ? 'font-black tracking-wider' : ''}>{item.label}</span>
-                  </div>
-
-                  {isLiveItem && (
-                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 ${
-                      liveCount > 0
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${liveCount > 0 ? 'bg-red-400 animate-ping' : 'bg-slate-500'}`}></span>
-                      <span>{liveCount > 0 ? `${liveCount}` : '0'}</span>
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
           </div>
         </div>
 
