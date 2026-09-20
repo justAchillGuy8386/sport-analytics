@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFootball } from '@/context/FootballContext';
-import { LiveMatchesTab } from '@/components/LiveMatchesTab';
+import { LiveMatchesTab } from './live/LiveMatchesTab';
 
 export default function RootLivePage() {
   const router = useRouter();

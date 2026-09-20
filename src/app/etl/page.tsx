@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useFootball } from '@/context/FootballContext';
-import { ETLQuotaMonitorTab } from '@/components/ETLQuotaMonitorTab';
+import { ETLQuotaMonitorTab } from './ETLQuotaMonitorTab';
 
 export default function ETLQuotaMonitorPage() {
   const { quotaUsed, setQuotaUsed } = useFootball();

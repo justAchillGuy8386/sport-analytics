@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFootball } from '@/context/FootballContext';
-import { CompetitionTab } from '@/components/CompetitionTab';
+import { CompetitionTab } from './CompetitionTab';
 
 export default function CompetitionPage() {
   const router = useRouter();

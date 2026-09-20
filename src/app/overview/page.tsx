@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFootball } from '@/context/FootballContext';
-import { OverviewTab } from '@/components/OverviewTab';
+import { OverviewTab } from './OverviewTab';
 
 export default function OverviewPage() {
   const router = useRouter();
