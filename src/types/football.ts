@@ -7,6 +7,7 @@ export interface Competition {
   flag: string;
   season: string;
   totalTeams: number;
+  slug: string;
 }
 
 export interface Team {

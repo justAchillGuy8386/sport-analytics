@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useFootball } from '@/context/FootballContext';
 import { COMPETITIONS } from '@/constants/competitions';
 import { 
@@ -12,6 +12,7 @@ import {
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { 
     selectedLeague, setSelectedLeague, 
     apiKey, setApiKey, 
@@ -59,8 +60,12 @@ export const Sidebar: React.FC = () => {
     { href: '/etl', label: 'ETL & Quota Monitor', icon: Database },
   ];
 
-  // Get current active tab label for header
-  const activeNavItem = navItems.find(item => item.href === pathname || (item.href === '/' && pathname === '/live')) || navItems[0];
+  // Get current active tab label for header (supports nested dynamic paths like /competition/[league])
+  const activeNavItem = navItems.find(item => 
+    item.href === pathname || 
+    (item.href === '/' && pathname === '/live') ||
+    (item.href !== '/' && pathname.startsWith(item.href))
+  ) || navItems[0];
 
   return (
     <>
@@ -139,7 +144,7 @@ export const Sidebar: React.FC = () => {
             </span>
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href === '/' && pathname === '/live');
+              const isActive = pathname === item.href || (item.href === '/' && pathname === '/live') || (item.href !== '/' && pathname.startsWith(item.href));
               const isLiveItem = Boolean(item.isLive);
               return (
                 <Link
@@ -224,6 +229,9 @@ export const Sidebar: React.FC = () => {
                     onClick={() => {
                       setSelectedLeague(comp.id);
                       setIsMobileOpen(false);
+                      if (pathname.startsWith('/competition')) {
+                        router.push(`/competition/${comp.slug}`);
+                      }
                     }}
                     className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                       selectedLeague === comp.id

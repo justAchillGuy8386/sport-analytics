@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { COMPETITIONS } from '@/constants/competitions';
 import { LEAGUE_RULES, getRankZone } from '@/constants/leagueRules';
 import { LeagueCode, StandingItem } from '@/types/football';
@@ -11,25 +13,35 @@ import { ScrollReveal } from '@/components/ScrollReveal';
 import { Trophy, Calendar, Sparkles, AlertCircle, Info, ShieldAlert, Award } from 'lucide-react';
 
 interface CompetitionTabProps {
-  selectedLeague: LeagueCode | 'ALL';
+  initialLeague?: LeagueCode;
+  selectedLeague?: LeagueCode | 'ALL';
   onSelectMatch: (matchId: string) => void;
 }
 
 const STANDINGS_CACHE_TTL = 30 * 60 * 1000; // 30 minutes persistent cache
 
 export const CompetitionTab: React.FC<CompetitionTabProps> = ({
+  initialLeague,
   selectedLeague,
   onSelectMatch
 }) => {
-  const { matches, apiKey, isRealDataMode } = useFootball();
+  const router = useRouter();
+  const { matches, apiKey, isRealDataMode, setSelectedLeague } = useFootball();
 
   const [activeLeague, setActiveLeague] = useState<LeagueCode>(
-    selectedLeague === 'ALL' ? 'PL' : selectedLeague
+    initialLeague || (selectedLeague && selectedLeague !== 'ALL' ? selectedLeague : 'PL')
   );
+
+  // Synchronize activeLeague when initialLeague prop changes from URL
+  useEffect(() => {
+    if (initialLeague && initialLeague !== activeLeague) {
+      setActiveLeague(initialLeague);
+    }
+  }, [initialLeague]);
 
   // Synchronize activeLeague when user changes selectedLeague from Sidebar
   useEffect(() => {
-    if (selectedLeague !== 'ALL') {
+    if (selectedLeague && selectedLeague !== 'ALL' && selectedLeague !== activeLeague) {
       setActiveLeague(selectedLeague);
     }
   }, [selectedLeague]);
@@ -126,9 +138,13 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
       {/* League Selection Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 border-b border-slate-800">
         {COMPETITIONS.map(comp => (
-          <button
+          <Link
             key={comp.id}
-            onClick={() => setActiveLeague(comp.id)}
+            href={`/competition/${comp.slug}`}
+            onClick={() => {
+              setActiveLeague(comp.id);
+              setSelectedLeague(comp.id);
+            }}
             className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
               activeLeague === comp.id
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/10 font-bold'
@@ -137,7 +153,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
           >
             <span className="text-base">{comp.flag}</span>
             <span>{comp.name}</span>
-          </button>
+          </Link>
         ))}
       </div>
 
