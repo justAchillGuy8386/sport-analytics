@@ -9,6 +9,7 @@ import { LeagueCode, StandingItem } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { useFootball } from '@/context/FootballContext';
 import { calculateStandingsFromMatches } from '@/utils/standingsCalculations';
+import { slugifyTeam } from '@/utils/teamSlug';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { Trophy, Calendar, Sparkles, AlertCircle, Info, ShieldAlert, Award } from 'lucide-react';
 
@@ -264,12 +265,18 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
                                 {item.rank}
                               </span>
                             </td>
-                            <td className="py-2 px-3 font-semibold text-white flex items-center gap-2">
-                              <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5 shrink-0" />
-                              <span className="truncate max-w-[120px] sm:max-w-none">{item.team.name}</span>
-                              {isLeader && (
-                                <span className="text-[11px] text-amber-400 select-none hidden sm:inline" title="Đội đầu bảng">👑</span>
-                              )}
+                            <td className="py-2 px-3 font-semibold text-white">
+                              <Link
+                                href={`/team/${slugifyTeam(item.team.name)}`}
+                                className="flex items-center gap-2 group hover:text-emerald-400 transition-colors w-fit"
+                                title={`Xem phân tích chi tiết CLB ${item.team.name}`}
+                              >
+                                <TeamLogo logo={item.team.logo} name={item.team.name} className="w-5 h-5 shrink-0 transition-transform group-hover:scale-110" />
+                                <span className="truncate max-w-[120px] sm:max-w-none group-hover:underline underline-offset-2">{item.team.name}</span>
+                                {isLeader && (
+                                  <span className="text-[11px] text-amber-400 select-none hidden sm:inline" title="Đội đầu bảng">👑</span>
+                                )}
+                              </Link>
                             </td>
                             <td className="py-2 px-2 text-center text-slate-300 font-mono">{item.played}</td>
                             <td className="py-2 px-2 text-center text-emerald-400 font-mono font-semibold">{item.won}</td>
