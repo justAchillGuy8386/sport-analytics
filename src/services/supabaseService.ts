@@ -11,16 +11,6 @@ export function normalizeMatchStatus(rawStatus: string, matchDate?: string): Mat
   if (!rawStatus) return 'UPCOMING';
   const s = rawStatus.toUpperCase().trim();
 
-  // If match date is in the future, it cannot be LIVE or FINISHED
-  if (matchDate) {
-    const matchTime = new Date(matchDate).getTime();
-    if (!isNaN(matchTime) && matchTime > Date.now()) {
-      if (['POSTPONED', 'PST', 'SUSP'].includes(s)) return 'POSTPONED';
-      if (['CANCELLED', 'CANC', 'ABD'].includes(s)) return 'CANCELLED';
-      return 'UPCOMING';
-    }
-  }
-
   const isLiveCode = ['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'BT', 'IN_PLAY', 'INT'].includes(s);
 
   if (isLiveCode) {
@@ -32,6 +22,16 @@ export function normalizeMatchStatus(rawStatus: string, matchDate?: string): Mat
       }
     }
     return 'LIVE';
+  }
+
+  // If match date is in the future (> 2 hours), it cannot be FINISHED
+  if (matchDate) {
+    const matchTime = new Date(matchDate).getTime();
+    if (!isNaN(matchTime) && matchTime > (Date.now() + 2 * 60 * 60 * 1000)) {
+      if (['POSTPONED', 'PST', 'SUSP'].includes(s)) return 'POSTPONED';
+      if (['CANCELLED', 'CANC', 'ABD'].includes(s)) return 'CANCELLED';
+      return 'UPCOMING';
+    }
   }
 
   if (['FINISHED', 'FT', 'AET', 'PEN'].includes(s)) return 'FINISHED';
@@ -208,7 +208,8 @@ export async function getMatchesFromSupabase(leagueCode?: LeagueCode | 'ALL', li
 
     const mappedMatches: Match[] = data.map((row: any) => {
       const matchStatus = normalizeMatchStatus(row.status, row.date);
-      const isFutureMatch = new Date(row.date).getTime() > nowMs;
+      const isLiveMatch = matchStatus === 'LIVE';
+      const isFutureMatch = !isLiveMatch && new Date(row.date).getTime() > (nowMs + 2 * 60 * 60 * 1000);
       const hScore = isFutureMatch ? 0 : (row.home_score ?? 0);
       const aScore = isFutureMatch ? 0 : (row.away_score ?? 0);
       const events = isFutureMatch ? [] : (row.events || []);

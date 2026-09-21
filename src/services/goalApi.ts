@@ -252,18 +252,20 @@ export function mapGoalFixtureToMatch(f: any, leagueCode: LeagueCode): Match {
 
   const statusRaw = (f.matchStatus || '').toUpperCase();
   let status: MatchStatus = 'UPCOMING';
-  if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
+  if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
+    status = 'LIVE';
+  } else if (['FINISHED', 'FT', 'AET', 'PEN'].includes(statusRaw)) {
     status = isFutureMatch ? 'UPCOMING' : 'FINISHED';
-  } else if (['LIVE', '1H', '2H', 'HT', 'ET', 'P', 'IN_PLAY'].includes(statusRaw) || f.matchLive === '1') {
-    status = isFutureMatch ? 'UPCOMING' : 'LIVE';
   } else if (['POSTPONED', 'PST'].includes(statusRaw)) {
     status = 'POSTPONED';
   } else if (['CANCELLED', 'CANC', 'ABD'].includes(statusRaw)) {
     status = 'CANCELLED';
   }
 
-  const hScore = isFutureMatch ? 0 : (parseInt(f.homeTeamScore ?? f.homeTeamFtScore ?? '0', 10) || 0);
-  const aScore = isFutureMatch ? 0 : (parseInt(f.awayTeamScore ?? f.awayTeamFtScore ?? '0', 10) || 0);
+  const isLive = status === 'LIVE';
+  const isReallyFuture = !isLive && isFutureMatch;
+  const hScore = isReallyFuture ? 0 : (parseInt(f.homeTeamScore ?? f.homeTeamFtScore ?? '0', 10) || 0);
+  const aScore = isReallyFuture ? 0 : (parseInt(f.awayTeamScore ?? f.awayTeamFtScore ?? '0', 10) || 0);
 
   const stats = !isFutureMatch && f.statistics && f.statistics.length > 0
     ? parseGoalStats(f.statistics)

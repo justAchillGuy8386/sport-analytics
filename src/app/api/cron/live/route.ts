@@ -108,17 +108,30 @@ async function handleLiveSync(request: Request) {
       });
     }
 
-    // 3. Check existing LIVE matches in Supabase: if any match was LIVE but is no longer in live list, mark as FINISHED
+    // 3. Check existing LIVE matches in Supabase:
+    // Only mark as FINISHED if at least 135 minutes (2h15m) have passed since kickoff.
+    // This prevents premature conclusions during halftime, VAR delays, or transient API glitches.
     const { data: dbLiveMatches } = await adminClient
       .from('matches')
-      .select('id, date')
+      .select('id, date, elapsed_time')
       .eq('status', 'LIVE');
 
     const finishedIds: string[] = [];
+    const nowMs = Date.now();
+    const SAFE_MATCH_DURATION_MS = 135 * 60 * 1000; // 135 minutes = 2 hours 15 mins
+
     if (Array.isArray(dbLiveMatches)) {
       for (const m of dbLiveMatches) {
         if (!activeLiveIds.has(String(m.id))) {
-          finishedIds.push(String(m.id));
+          const startTime = new Date(m.date).getTime();
+          const elapsedMs = nowMs - startTime;
+
+          // Only conclude if >= 135 minutes have passed since kickoff
+          if (!isNaN(startTime) && elapsedMs >= SAFE_MATCH_DURATION_MS) {
+            finishedIds.push(String(m.id));
+          } else {
+            console.log(`⏳ Match ${m.id} missing from live feed, but only ${Math.round(elapsedMs / 60000)}m passed. Keeping status LIVE.`);
+          }
         }
       }
     }
@@ -128,7 +141,7 @@ async function handleLiveSync(request: Request) {
         .from('matches')
         .update({ status: 'FINISHED', updated_at: new Date().toISOString() })
         .in('id', finishedIds);
-      console.log(`🏁 Marked ${finishedIds.length} matches as FINISHED (no longer in live feed).`);
+      console.log(`🏁 Marked ${finishedIds.length} matches as FINISHED (duration >= 135m).`);
     }
 
     // 4. Upsert current live matches into Supabase
