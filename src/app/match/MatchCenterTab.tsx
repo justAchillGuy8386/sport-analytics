@@ -332,56 +332,70 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             </div>
           )}
 
+          {/* Team Legend for Stats */}
+          <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-800/80 text-xs">
+            <div className="flex items-center gap-1.5 font-bold text-red-400 truncate max-w-[45%]">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 shadow-xs shadow-red-500/50"></span>
+              <span className="truncate">{homeTeam.shortName || homeTeam.name}</span>
+              <span className="text-[10px] text-slate-500 font-normal">(Home)</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-bold text-white truncate max-w-[45%] justify-end">
+              <span className="text-[10px] text-slate-500 font-normal">(Away)</span>
+              <span className="truncate">{awayTeam.shortName || awayTeam.name}</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-white shrink-0 shadow-xs shadow-white/50"></span>
+            </div>
+          </div>
+
           <div className="space-y-4 text-xs">
             {/* Possession */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-emerald-400 font-mono">{safeStats.home.possession}%</span>
-                <span className="text-slate-400">Kiểm Soát Bóng</span>
-                <span className="font-bold text-cyan-400 font-mono">{safeStats.away.possession}%</span>
+                <span className="font-bold text-red-400 font-mono">{safeStats.home.possession}%</span>
+                <span className="text-slate-400 font-medium">Kiểm Soát Bóng</span>
+                <span className="font-bold text-white font-mono">{safeStats.away.possession}%</span>
               </div>
               <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
-                <div className="bg-emerald-500 h-full" style={{ width: `${safeStats.home.possession}%` }}></div>
-                <div className="bg-cyan-500 h-full" style={{ width: `${safeStats.away.possession}%` }}></div>
+                <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${safeStats.home.possession}%` }}></div>
+                <div className="bg-white h-full transition-all duration-500" style={{ width: `${safeStats.away.possession}%` }}></div>
               </div>
             </div>
 
             {/* Total Shots */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-emerald-400 font-mono">{safeStats.home.shots}</span>
-                <span className="text-slate-400">Tổng Số Cú Sút</span>
-                <span className="font-bold text-cyan-400 font-mono">{safeStats.away.shots}</span>
+                <span className="font-bold text-red-400 font-mono">{safeStats.home.shots}</span>
+                <span className="text-slate-400 font-medium">Tổng Số Cú Sút</span>
+                <span className="font-bold text-white font-mono">{safeStats.away.shots}</span>
               </div>
               <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
-                <div className="bg-emerald-500 h-full" style={{ width: `${(safeStats.home.shots / (safeStats.home.shots + safeStats.away.shots || 1)) * 100}%` }}></div>
-                <div className="bg-cyan-500 h-full" style={{ width: `${(safeStats.away.shots / (safeStats.home.shots + safeStats.away.shots || 1)) * 100}%` }}></div>
+                <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${(safeStats.home.shots / (safeStats.home.shots + safeStats.away.shots || 1)) * 100}%` }}></div>
+                <div className="bg-white h-full transition-all duration-500" style={{ width: `${(safeStats.away.shots / (safeStats.home.shots + safeStats.away.shots || 1)) * 100}%` }}></div>
               </div>
             </div>
 
             {/* Shots on Target */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-emerald-400 font-mono">{safeStats.home.shotsOnTarget}</span>
-                <span className="text-slate-400">Cú Sút Trúng Đích</span>
-                <span className="font-bold text-cyan-400 font-mono">{safeStats.away.shotsOnTarget}</span>
+                <span className="font-bold text-red-400 font-mono">{safeStats.home.shotsOnTarget}</span>
+                <span className="text-slate-400 font-medium">Cú Sút Trúng Đích</span>
+                <span className="font-bold text-white font-mono">{safeStats.away.shotsOnTarget}</span>
               </div>
               <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
-                <div className="bg-emerald-500 h-full" style={{ width: `${(safeStats.home.shotsOnTarget / (safeStats.home.shotsOnTarget + safeStats.away.shotsOnTarget || 1)) * 100}%` }}></div>
-                <div className="bg-cyan-500 h-full" style={{ width: `${(safeStats.away.shotsOnTarget / (safeStats.home.shotsOnTarget + safeStats.away.shotsOnTarget || 1)) * 100}%` }}></div>
+                <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${(safeStats.home.shotsOnTarget / (safeStats.home.shotsOnTarget + safeStats.away.shotsOnTarget || 1)) * 100}%` }}></div>
+                <div className="bg-white h-full transition-all duration-500" style={{ width: `${(safeStats.away.shotsOnTarget / (safeStats.home.shotsOnTarget + safeStats.away.shotsOnTarget || 1)) * 100}%` }}></div>
               </div>
             </div>
 
             {/* Corners */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-emerald-400 font-mono">{safeStats.home.corners}</span>
-                <span className="text-slate-400">Phạt Góc</span>
-                <span className="font-bold text-cyan-400 font-mono">{safeStats.away.corners}</span>
+                <span className="font-bold text-red-400 font-mono">{safeStats.home.corners}</span>
+                <span className="text-slate-400 font-medium">Phạt Góc</span>
+                <span className="font-bold text-white font-mono">{safeStats.away.corners}</span>
               </div>
               <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden flex border border-slate-800">
-                <div className="bg-emerald-500 h-full" style={{ width: `${(safeStats.home.corners / (safeStats.home.corners + safeStats.away.corners || 1)) * 100}%` }}></div>
-                <div className="bg-cyan-500 h-full" style={{ width: `${(safeStats.away.corners / (safeStats.home.corners + safeStats.away.corners || 1)) * 100}%` }}></div>
+                <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${(safeStats.home.corners / (safeStats.home.corners + safeStats.away.corners || 1)) * 100}%` }}></div>
+                <div className="bg-white h-full transition-all duration-500" style={{ width: `${(safeStats.away.corners / (safeStats.home.corners + safeStats.away.corners || 1)) * 100}%` }}></div>
               </div>
             </div>
 
@@ -389,11 +403,19 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
             <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-3 text-center">
               <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
                 <span className="text-slate-400 text-[11px] block">Thẻ Vàng (Home / Away)</span>
-                <strong className="text-amber-400 font-mono text-sm">{safeStats.home.yellowCards} - {safeStats.away.yellowCards}</strong>
+                <strong className="font-mono text-sm flex items-center justify-center gap-1.5 mt-0.5">
+                  <span className="text-red-400">{safeStats.home.yellowCards}</span>
+                  <span className="text-slate-500">-</span>
+                  <span className="text-white">{safeStats.away.yellowCards}</span>
+                </strong>
               </div>
               <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
                 <span className="text-slate-400 text-[11px] block">Thẻ Đỏ (Home / Away)</span>
-                <strong className="text-red-400 font-mono text-sm">{safeStats.home.redCards} - {safeStats.away.redCards}</strong>
+                <strong className="font-mono text-sm flex items-center justify-center gap-1.5 mt-0.5">
+                  <span className="text-red-400">{safeStats.home.redCards}</span>
+                  <span className="text-slate-500">-</span>
+                  <span className="text-white">{safeStats.away.redCards}</span>
+                </strong>
               </div>
             </div>
           </div>
