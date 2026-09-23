@@ -81,9 +81,12 @@ export const Sidebar: React.FC = () => {
             <span className="text-xs font-bold font-mono">MENU</span>
           </button>
 
-          <span className="font-bold text-white text-xs sm:text-sm truncate">
-            {activeNavItem.label}
-          </span>
+          <Link href="/" className="flex items-center gap-2 group">
+            <img src="/icon.svg" alt="Logo" className="w-6 h-6 object-contain" />
+            <span className="font-bold text-white text-xs sm:text-sm truncate group-hover:text-emerald-400 transition-colors">
+              {activeNavItem.label}
+            </span>
+          </Link>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -108,23 +111,28 @@ export const Sidebar: React.FC = () => {
       >
         {/* Top Header - Always pinned at the top of the sidebar */}
         <div className="p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-slate-900 bg-slate-950">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20 shrink-0">
+          <Link
+            href="/"
+            onClick={() => setIsMobileOpen(false)}
+            className="flex items-center gap-3 group transition-transform active:scale-95 cursor-pointer"
+            title="Về trang chủ LIVE"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20 shrink-0 group-hover:shadow-emerald-500/40 group-hover:scale-105 transition-all duration-300">
               <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center overflow-hidden p-1">
                 <img src="/icon.svg" alt="Football Analytics Logo" className="w-full h-full object-contain" />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="font-extrabold text-base text-white tracking-wide">
-                  FOOTBALL<span className="text-emerald-400">ANALYTICS</span>
+                <h1 className="font-extrabold text-base text-white tracking-wide group-hover:text-emerald-400 transition-colors">
+                  FOOTBALL<span className="text-emerald-400 group-hover:text-white transition-colors">ANALYTICS</span>
                 </h1>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors">
                 Data Platform • Mùa 2026/27
               </p>
             </div>
-          </div>
+          </Link>
 
           <button
             onClick={() => setIsMobileOpen(false)}
