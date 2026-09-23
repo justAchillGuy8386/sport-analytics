@@ -44,8 +44,25 @@ export function normalizeMatchStatus(rawStatus: string, matchDate?: string): Mat
  * Helper to guarantee valid match statistics structure from raw database records or match events
  */
 function ensureMatchStats(rawStats: any, homeScore: number, awayScore: number, events: any[] = []) {
+  const normalizePoss = (hPoss: any, aPoss: any): { home: number; away: number } => {
+    let h = parseInt(String(hPoss ?? '').replace('%', '').trim(), 10);
+    let a = parseInt(String(aPoss ?? '').replace('%', '').trim(), 10);
+    if (isNaN(h)) h = 0;
+    if (isNaN(a)) a = 0;
+
+    if (h === 0 && a === 0) return { home: 50, away: 50 };
+    if (h > 0 && a === 0) return { home: h, away: Math.max(0, 100 - h) };
+    if (a > 0 && h === 0) return { home: Math.max(0, 100 - a), away: a };
+    return { home: h, away: a };
+  };
+
   if (rawStats && rawStats.home && rawStats.away) {
-    return rawStats;
+    const poss = normalizePoss(rawStats.home.possession, rawStats.away.possession);
+    return {
+      ...rawStats,
+      home: { ...rawStats.home, possession: poss.home },
+      away: { ...rawStats.away, possession: poss.away }
+    };
   }
 
   const eventYellowsHome = events.filter(e => (e.teamId === 'home' || e.teamId === '1') && e.type === 'yellow_card').length;
@@ -53,9 +70,11 @@ function ensureMatchStats(rawStats: any, homeScore: number, awayScore: number, e
   const eventRedsHome = events.filter(e => (e.teamId === 'home' || e.teamId === '1') && e.type === 'red_card').length;
   const eventRedsAway = events.filter(e => (e.teamId === 'away' || e.teamId === '2') && e.type === 'red_card').length;
 
+  const poss = normalizePoss(rawStats?.home?.possession, rawStats?.away?.possession);
+
   return {
     home: {
-      possession: rawStats?.home?.possession ?? 50,
+      possession: poss.home,
       shots: rawStats?.home?.shots ?? 0,
       shotsOnTarget: rawStats?.home?.shotsOnTarget ?? 0,
       corners: rawStats?.home?.corners ?? 0,
@@ -66,7 +85,7 @@ function ensureMatchStats(rawStats: any, homeScore: number, awayScore: number, e
       saves: rawStats?.home?.saves ?? 0
     },
     away: {
-      possession: rawStats?.away?.possession ?? 50,
+      possession: poss.away,
       shots: rawStats?.away?.shots ?? 0,
       shotsOnTarget: rawStats?.away?.shotsOnTarget ?? 0,
       corners: rawStats?.away?.corners ?? 0,

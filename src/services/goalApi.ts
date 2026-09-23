@@ -66,8 +66,33 @@ export async function fetchApiQuotaStatus(apiKey?: string): Promise<{ current: n
  * Helper to parse full statistics array from Goal API fixture
  */
 export function parseGoalStats(statisticsArray: any[] = []): { home: TeamStatistics; away: TeamStatistics } {
-  const findStat = (typeName: string) => {
-    return statisticsArray.find(s => s.type?.toLowerCase() === typeName.toLowerCase());
+  if (!Array.isArray(statisticsArray) || statisticsArray.length === 0) {
+    return {
+      home: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, offsides: 0, yellowCards: 0, redCards: 0, saves: 0 },
+      away: { possession: 50, shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, offsides: 0, yellowCards: 0, redCards: 0, saves: 0 }
+    };
+  }
+
+  const findStat = (...typeNames: string[]) => {
+    const lowerNames = typeNames.map(t => t.toLowerCase());
+    const matches = statisticsArray.filter(s => s.type && lowerNames.includes(s.type.toLowerCase()));
+    if (matches.length === 0) return undefined;
+
+    // Filter by half: prefer 'full', otherwise any
+    const fullMatches = matches.filter(s => (s.half || '').toLowerCase() === 'full');
+    const pool = fullMatches.length > 0 ? fullMatches : matches;
+
+    // Find the entry that has non-zero values if possible (e.g. avoid 0% - 0% duplicate placeholder)
+    const validNonZero = pool.find(s => {
+      const h = parseInt(String(s.home).replace('%', '').trim(), 10) || 0;
+      const a = parseInt(String(s.away).replace('%', '').trim(), 10) || 0;
+      return (h + a) > 0;
+    });
+
+    if (validNonZero) return validNonZero;
+
+    // Otherwise, pick the latest candidate in Goal API array (often the finalized record)
+    return pool[pool.length - 1];
   };
 
   const parseVal = (stat: any, side: 'home' | 'away', fallback = 0): number => {
@@ -77,19 +102,32 @@ export function parseGoalStats(statisticsArray: any[] = []): { home: TeamStatist
     return isNaN(parsed) ? fallback : parsed;
   };
 
-  const possessionStat = findStat('Ball Possession') || findStat('Possession');
-  const shotsTotal = findStat('Shots Total') || findStat('Total Shots');
-  const shotsOnGoal = findStat('Shots On Goal') || findStat('On Target');
-  const corners = findStat('Corners') || findStat('Corner Kicks');
+  const possessionStat = findStat('Ball Possession', 'Possession');
+  const shotsTotal = findStat('Shots Total', 'Total Shots');
+  const shotsOnGoal = findStat('Shots On Goal', 'On Target');
+  const corners = findStat('Corners', 'Corner Kicks');
   const fouls = findStat('Fouls');
   const offsides = findStat('Offsides');
   const yellowCards = findStat('Yellow Cards');
   const redCards = findStat('Red Cards');
-  const saves = findStat('Saves') || findStat('Goalkeeper Saves');
+  const saves = findStat('Saves', 'Goalkeeper Saves');
+
+  let homePoss = parseVal(possessionStat, 'home', 0);
+  let awayPoss = parseVal(possessionStat, 'away', 0);
+
+  // If possession values are both 0 or invalid, normalize to 50-50 fallback
+  if (homePoss === 0 && awayPoss === 0) {
+    homePoss = 50;
+    awayPoss = 50;
+  } else if (homePoss > 0 && awayPoss === 0) {
+    awayPoss = Math.max(0, 100 - homePoss);
+  } else if (awayPoss > 0 && homePoss === 0) {
+    homePoss = Math.max(0, 100 - awayPoss);
+  }
 
   return {
     home: {
-      possession: parseVal(possessionStat, 'home', 50),
+      possession: homePoss,
       shots: parseVal(shotsTotal, 'home', 0),
       shotsOnTarget: parseVal(shotsOnGoal, 'home', 0),
       corners: parseVal(corners, 'home', 0),
@@ -100,7 +138,7 @@ export function parseGoalStats(statisticsArray: any[] = []): { home: TeamStatist
       saves: parseVal(saves, 'home', 0)
     },
     away: {
-      possession: parseVal(possessionStat, 'away', 50),
+      possession: awayPoss,
       shots: parseVal(shotsTotal, 'away', 0),
       shotsOnTarget: parseVal(shotsOnGoal, 'away', 0),
       corners: parseVal(corners, 'away', 0),

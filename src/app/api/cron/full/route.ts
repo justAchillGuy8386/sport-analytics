@@ -55,12 +55,17 @@ function checkHasFullDetailedStats(existing: any, raw: any): boolean {
     return false;
   }
 
-  // 2. If it has real match stats (shots, corners, or fouls) -> Complete!
+  // 2. If possession is 0-0, match stats are incomplete and need full detail sync
+  if (stats && stats.home?.possession === 0 && stats.away?.possession === 0) {
+    return false;
+  }
+
+  // 3. If it has real match stats (shots, corners, or fouls) -> Complete!
   if (hasRealStats) {
     return true;
   }
 
-  // 3. If match was 0-0 and has recorded events and differentiated possession -> Complete!
+  // 4. If match was 0-0 and has recorded events and differentiated possession -> Complete!
   if (totalGoals === 0 && events.length > 0 && stats?.home?.possession !== 50) {
     return true;
   }

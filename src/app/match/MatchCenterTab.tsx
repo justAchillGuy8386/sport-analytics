@@ -129,15 +129,36 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     saves: 0
   };
 
+  const rawHomePoss = stats?.home?.possession;
+  const rawAwayPoss = stats?.away?.possession;
+  let homePoss = rawHomePoss ?? 50;
+  let awayPoss = rawAwayPoss ?? 50;
+
+  if (homePoss === 0 && awayPoss === 0) {
+    homePoss = 50;
+    awayPoss = 50;
+  } else if (homePoss > 0 && awayPoss === 0) {
+    awayPoss = Math.max(0, 100 - homePoss);
+  } else if (awayPoss > 0 && homePoss === 0) {
+    homePoss = Math.max(0, 100 - awayPoss);
+  }
+
   const safeStats = {
-    home: stats?.home || defaultTeamStats,
-    away: stats?.away || defaultTeamStats
+    home: {
+      ...(stats?.home || defaultTeamStats),
+      possession: homePoss
+    },
+    away: {
+      ...(stats?.away || defaultTeamStats),
+      possession: awayPoss
+    }
   };
 
   const isFutureMatch = new Date(activeMatch.date).getTime() > Date.now();
 
   const isStatsMissing = !isFutureMatch && activeMatch.status === 'FINISHED' && (
     (safeStats.home.shots === 0 && safeStats.away.shots === 0 && safeStats.home.corners === 0 && safeStats.away.corners === 0) ||
+    (rawHomePoss === 0 && rawAwayPoss === 0) ||
     ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0) > 0 && 
      (events || []).filter((e: any) => e.type === 'goal').length < ((activeMatch.homeScore ?? 0) + (activeMatch.awayScore ?? 0)))
   );

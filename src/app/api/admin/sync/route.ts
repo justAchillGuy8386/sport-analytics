@@ -33,6 +33,11 @@ function checkHasFullDetailedStats(existing: any, raw: any): boolean {
     return false;
   }
 
+  // If possession is 0-0, match stats are incomplete and need full detail sync
+  if (stats && stats.home?.possession === 0 && stats.away?.possession === 0) {
+    return false;
+  }
+
   if (hasRealStats) {
     return true;
   }
