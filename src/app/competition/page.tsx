@@ -19,7 +19,7 @@ export default function CompetitionPage() {
 
   const handleSelectMatch = (matchId: string) => {
     setSelectedMatchId(matchId);
-    router.push('/match');
+    router.push(`/match/${matchId}`);
   };
 
   return (

@@ -16,7 +16,7 @@ export default function CompetitionLeaguePage() {
 
   const handleSelectMatch = (matchId: string) => {
     setSelectedMatchId(matchId);
-    router.push('/match');
+    router.push(`/match/${matchId}`);
   };
 
   return (

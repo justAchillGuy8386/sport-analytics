@@ -11,7 +11,7 @@ export default function RootLivePage() {
 
   const handleSelectMatch = (matchId: string) => {
     setSelectedMatchId(matchId);
-    router.push('/match');
+    router.push(`/match/${matchId}`);
   };
 
   return (

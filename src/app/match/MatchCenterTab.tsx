@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Match } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { getLiveMinute } from '@/utils/matchTime';
@@ -40,20 +41,28 @@ const formatShortDate = (dateStr?: string) => {
 
 interface MatchCenterTabProps {
   matches: Match[];
+  allMatches?: Match[];
   selectedMatchId?: string;
 }
 
 export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
   matches,
+  allMatches = [],
   selectedMatchId
 }) => {
-  const { updateMatch } = useFootball();
+  const router = useRouter();
+  const { updateMatch, isLoadingApi } = useFootball();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   // Priority Sort: LIVE -> Recently finished (last 48h) -> Near upcoming (next 48h) -> older finished -> distant fixtures
   const matchDataList = useMemo(() => {
-    if (!matches || matches.length === 0) return [];
+    // If selectedMatchId is given, and matches doesn't have it, but allMatches does, use allMatches so it's always found
+    const baseList = (allMatches.length > 0 && selectedMatchId && !matches.some(m => m.id === selectedMatchId) && allMatches.some(m => m.id === selectedMatchId))
+      ? allMatches
+      : (matches.length > 0 ? matches : allMatches);
+
+    if (!baseList || baseList.length === 0) return [];
     const now = Date.now();
     const getMatchPriority = (status: string, time: number) => {
       if (status === 'LIVE') return 100;
@@ -65,7 +74,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
       return 10;
     };
 
-    return [...matches].sort((a, b) => {
+    return [...baseList].sort((a, b) => {
       const timeA = new Date(a.date).getTime();
       const timeB = new Date(b.date).getTime();
       const prioA = getMatchPriority(a.status, timeA);
@@ -85,27 +94,41 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
 
       return timeB - timeA;
     });
-  }, [matches]);
+  }, [matches, allMatches, selectedMatchId]);
 
   const [activeMatchId, setActiveMatchId] = useState<string>(
     selectedMatchId || matchDataList[0]?.id || ''
   );
 
-  // Sync activeMatchId ONLY when parent explicitly changes selectedMatchId prop
+  // Sync activeMatchId whenever selectedMatchId prop changes (e.g. user navigates to /match/[id])
   useEffect(() => {
-    if (selectedMatchId && matchDataList.some((m: Match) => m.id === selectedMatchId)) {
+    if (selectedMatchId) {
       setActiveMatchId(selectedMatchId);
     }
-  }, [selectedMatchId, matchDataList]);
+  }, [selectedMatchId]);
 
-  // Ensure activeMatchId is valid when match list loads/updates
+  // Ensure activeMatchId is valid when match list loads/updates if no selectedMatchId is given
   useEffect(() => {
-    if (matchDataList.length > 0 && !matchDataList.some((m: Match) => m.id === activeMatchId)) {
+    if (!selectedMatchId && matchDataList.length > 0 && !matchDataList.some((m: Match) => m.id === activeMatchId)) {
       setActiveMatchId(matchDataList[0].id);
     }
-  }, [matchDataList, activeMatchId]);
+  }, [matchDataList, activeMatchId, selectedMatchId]);
 
-  if (!matches || matches.length === 0) {
+  const handleSelectMatch = (matchId: string) => {
+    setActiveMatchId(matchId);
+    router.push(`/match/${matchId}`, { scroll: false });
+  };
+
+  const hasMatches = (matches && matches.length > 0) || (allMatches && allMatches.length > 0);
+  if (!hasMatches) {
+    if (isLoadingApi) {
+      return (
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center text-slate-400 space-y-3 animate-pulse">
+          <RefreshCw className="w-8 h-8 text-emerald-400 mx-auto animate-spin" />
+          <p className="text-sm font-medium text-slate-300">Đang tải dữ liệu trận đấu...</p>
+        </div>
+      );
+    }
     return (
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center text-slate-400 space-y-3">
         <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
@@ -114,7 +137,25 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
     );
   }
 
-  const activeMatch = matchDataList.find((m: Match) => m.id === activeMatchId) || matchDataList[0];
+  const activeMatch = matchDataList.find((m: Match) => m.id === activeMatchId) ||
+    allMatches.find((m: Match) => m.id === activeMatchId) ||
+    matchDataList[0] ||
+    allMatches[0];
+
+  if (!activeMatch) {
+    return (
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center text-slate-400 space-y-3">
+        <AlertCircle className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
+        <p className="text-sm font-medium">Không tìm thấy thông tin trận đấu này.</p>
+        <button
+          onClick={() => router.push('/match')}
+          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all"
+        >
+          Xem trận đấu khác
+        </button>
+      </div>
+    );
+  }
   const { homeTeam, awayTeam, homeScore, awayScore, stats, events, lineups } = activeMatch;
 
   const defaultTeamStats = {
@@ -197,7 +238,7 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
         {matchDataList.map((m: Match) => (
           <button
             key={m.id}
-            onClick={() => setActiveMatchId(m.id)}
+            onClick={() => handleSelectMatch(m.id)}
             className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
               activeMatchId === m.id
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold shadow-lg shadow-emerald-500/10'
