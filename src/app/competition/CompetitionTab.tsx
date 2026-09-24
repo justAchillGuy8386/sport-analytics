@@ -27,7 +27,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
   onSelectMatch
 }) => {
   const router = useRouter();
-  const { matches, apiKey, isRealDataMode, setSelectedLeague } = useFootball();
+  const { matches, setSelectedLeague } = useFootball();
 
   const [activeLeague, setActiveLeague] = useState<LeagueCode>(
     initialLeague || (selectedLeague && selectedLeague !== 'ALL' ? selectedLeague : 'PL')
@@ -82,7 +82,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
 
       setIsLoadingStandings(true);
       try {
-        const res = await fetch(`/api/football/standings?league=${activeLeague}&apiKey=${encodeURIComponent(apiKey || '')}`);
+        const res = await fetch(`/api/football/standings?league=${activeLeague}`);
         const result = await res.json();
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           setStandings(result.data);
@@ -112,7 +112,7 @@ export const CompetitionTab: React.FC<CompetitionTabProps> = ({
     }
 
     loadStandings();
-  }, [activeLeague, apiKey, isRealDataMode, matches.length]);
+  }, [activeLeague, matches.length]);
 
   // Compute effective standings list
   const effectiveStandings = standings.length > 0 

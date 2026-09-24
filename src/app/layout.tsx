@@ -61,9 +61,9 @@ export default function RootLayout({
                   </Link>
 
                   <div className="flex flex-wrap items-center gap-4 text-slate-400 text-[11px]">
-                    <span>Next.js 15 App Router</span>
+                    <span>2026 Sport Analytics</span>
                     <span>•</span>
-                    <span>Goal API Integration</span>
+                    <span>All rights reserved</span>
                   </div>
                 </div>
               </footer>

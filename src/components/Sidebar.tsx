@@ -7,7 +7,7 @@ import { useFootball } from '@/context/FootballContext';
 import { COMPETITIONS } from '@/constants/competitions';
 import { 
   BarChart3, Trophy, Users, Swords, Calculator, Database, 
-  Key, Activity, X, Menu, Radio, Sparkles
+  X, Menu, Radio, Sparkles
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -15,14 +15,9 @@ export const Sidebar: React.FC = () => {
   const router = useRouter();
   const { 
     selectedLeague, setSelectedLeague, 
-    apiKey, setApiKey, 
-    isRealDataMode, setIsRealDataMode, 
-    quotaUsed,
     allMatches = []
   } = useFootball();
 
-  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
-  const [inputKey, setInputKey] = useState<string>(apiKey);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -37,16 +32,6 @@ export const Sidebar: React.FC = () => {
       };
     }
   }, [isMobileOpen]);
-
-  const isQuotaWarning = quotaUsed >= 90;
-
-  const handleSaveKey = () => {
-    setApiKey(inputKey);
-    if (inputKey.trim()) {
-      setIsRealDataMode(true);
-    }
-    setShowKeyModal(false);
-  };
 
   const liveCount = allMatches.filter(m => m.status === 'LIVE').length;
 
@@ -267,92 +252,7 @@ export const Sidebar: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Footer Sidebar Badges & API Key Modal Switcher - Always pinned at bottom */}
-        <div className="p-4 border-t border-slate-900 bg-slate-950 space-y-3 shrink-0">
-          {/* API Status Button */}
-          <button
-            onClick={() => setShowKeyModal(true)}
-            className={`w-full flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
-              isRealDataMode
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Key className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isRealDataMode ? '🟢 Goal API Live' : '⚪ Real Data Mode'}</span>
-            </div>
-            <span className="text-[10px] text-slate-500 underline">Cấu hình</span>
-          </button>
-
-          {/* Quota Indicator */}
-          <div className={`flex items-center justify-between text-xs font-mono px-3 py-2 rounded-xl border ${
-            isQuotaWarning
-              ? 'bg-amber-950/40 text-amber-300 border-amber-500/30'
-              : 'bg-slate-900 text-slate-300 border-slate-800'
-          }`}>
-            <div className="flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Goal API Quota</span>
-            </div>
-            <span className={`font-bold ${isQuotaWarning ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {quotaUsed}/1.000
-            </span>
-          </div>
-        </div>
       </aside>
-
-      {/* API Key Modal */}
-      {showKeyModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white flex items-center gap-2 text-sm">
-                <Key className="w-4 h-4 text-emerald-400" />
-                <span>Cấu Hình Kết Nối Goal API</span>
-              </h3>
-              <button onClick={() => setShowKeyModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-400">
-              API Key từ Goal API (goal-api.com) để đồng bộ tỷ số thời gian thực.
-            </p>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Goal API Key:</label>
-              <input
-                type="password"
-                placeholder="gapi_..."
-                value={inputKey}
-                onChange={(e) => setInputKey(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-white font-mono text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-2">
-              <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isRealDataMode}
-                  onChange={(e) => setIsRealDataMode(e.target.checked)}
-                  className="rounded border-slate-800 bg-slate-950 text-emerald-500 focus:ring-0"
-                />
-                <span>Kích hoạt Dữ Liệu Real API</span>
-              </label>
-
-              <button
-                onClick={handleSaveKey}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl transition-all"
-              >
-                Lưu & Kết Nối
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

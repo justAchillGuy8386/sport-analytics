@@ -3,18 +3,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Match, LeagueCode } from '@/types/football';
 
-const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_GOAL_API_KEY || process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || '';
-
 interface FootballContextType {
   matches: Match[];
   allMatches: Match[];
   isLoadingApi: boolean;
   selectedLeague: LeagueCode | 'ALL';
   setSelectedLeague: (league: LeagueCode | 'ALL') => void;
-  apiKey: string;
-  setApiKey: (key: string) => void;
-  isRealDataMode: boolean;
-  setIsRealDataMode: (real: boolean) => void;
   quotaUsed: number;
   setQuotaUsed: (quota: number) => void;
   refreshQuota: () => Promise<void>;
@@ -29,8 +23,6 @@ const FootballContext = createContext<FootballContextType | undefined>(undefined
 export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedLeague, setSelectedLeague] = useState<LeagueCode | 'ALL'>('ALL');
   const [quotaUsed, setQuotaUsed] = useState<number>(0);
-  const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
-  const [isRealDataMode, setIsRealDataMode] = useState<boolean>(true);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
@@ -123,10 +115,6 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isLoadingApi,
         selectedLeague,
         setSelectedLeague,
-        apiKey,
-        setApiKey,
-        isRealDataMode,
-        setIsRealDataMode,
         quotaUsed,
         setQuotaUsed,
         refreshQuota,

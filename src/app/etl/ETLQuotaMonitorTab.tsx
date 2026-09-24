@@ -14,7 +14,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
   quotaUsed,
   setQuotaUsed
 }) => {
-  const { refreshQuota, apiKey } = useFootball();
+  const { refreshQuota } = useFootball();
   const [logs, setLogs] = useState<ETLRunLog[]>([]);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string>('');
@@ -32,7 +32,7 @@ export const ETLQuotaMonitorTab: React.FC<ETLQuotaMonitorTabProps> = ({
       const res = await fetch('/api/admin/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey })
+        body: JSON.stringify({})
       });
       const data = await res.json();
 
