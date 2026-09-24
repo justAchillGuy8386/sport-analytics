@@ -416,7 +416,7 @@ export const LiveMatchesTab: React.FC<LiveMatchesTabProps> = ({
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                 <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  Kết Quả Vừa Kết Thúc Gần Nhất
+                   Vừa Kết Thúc
                 </h3>
                 <Link href="/competition" className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium">
                   <span>Bảng xếp hạng</span>
