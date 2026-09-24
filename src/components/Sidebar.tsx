@@ -252,6 +252,24 @@ export const Sidebar: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Sidebar Footer - Always pinned at the bottom */}
+        <div className="p-3.5 border-t border-slate-900 bg-slate-950/95 shrink-0">
+          <Link
+            href="/"
+            onClick={() => setIsMobileOpen(false)}
+            className="flex items-center gap-2 hover:opacity-85 transition-opacity group"
+            title="Trang chủ LIVE"
+          >
+            <img src="/icon.svg" alt="Football Analytics Logo" className="w-4 h-4 rounded object-contain shrink-0" />
+            <span className="font-bold text-white text-xs group-hover:text-emerald-400 transition-colors">
+              Football Analytics Platform
+            </span>
+            <span className="text-[10px] text-slate-500 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+              v1.0.0
+            </span>
+          </Link>
+        </div>
       </aside>
     </>
   );
