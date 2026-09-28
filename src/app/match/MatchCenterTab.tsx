@@ -6,7 +6,8 @@ import { Match } from '@/types/football';
 import { TeamLogo } from '@/components/TeamLogo';
 import { getLiveMinute } from '@/utils/matchTime';
 import { useFootball } from '@/context/FootballContext';
-import { Swords, Clock, MapPin, User, Activity, AlertCircle, Calendar, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { Swords, Clock, MapPin, User, Activity, AlertCircle, Calendar, RefreshCw, ArrowLeft } from 'lucide-react';
 
 const formatMatchDateTime = (dateStr?: string) => {
   if (!dateStr) return '';
@@ -233,6 +234,17 @@ export const MatchCenterTab: React.FC<MatchCenterTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Back to Match Center Hub button */}
+      <div className="flex items-center justify-between gap-3 animate-fade-in-up">
+        <Link
+          href="/match"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 hover:bg-slate-800 transition-all shadow-sm group"
+        >
+          <ArrowLeft className="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Quay lại danh sách Match Center (Tất cả trận đấu)</span>
+        </Link>
+      </div>
+
       {/* Match Selector Strip */}
       <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2 border-b border-slate-800 animate-fade-in-up">
         {matchDataList.map((m: Match) => (

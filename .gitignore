@@ -44,3 +44,4 @@ next-env.d.ts
 
 # rules & local config
 rule.md
+*.md
