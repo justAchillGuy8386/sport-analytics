@@ -159,12 +159,13 @@ export function parseGoalEvents(events: any[] = [], cards: any[] = [], substitut
 
   // 1. Goals
   events.forEach((e, idx) => {
+    const isHome = e.homeScorer ? true : (e.awayScorer ? false : (e.team === 'home' || e.team === '1'));
     result.push({
       id: e.id || `goal-${idx}`,
       time: parseInt(e.time, 10) || 0,
       type: 'goal',
-      teamId: e.homeScorer ? 'home' : 'away',
-      player: e.homeScorer || e.awayScorer || 'Bàn thắng',
+      teamId: isHome ? 'home' : 'away',
+      player: e.homeScorer || e.awayScorer || e.player || 'Bàn thắng',
       assistPlayer: e.homeAssist || e.awayAssist || undefined,
       detail: e.score || undefined
     });
@@ -173,25 +174,59 @@ export function parseGoalEvents(events: any[] = [], cards: any[] = [], substitut
   // 2. Cards
   cards.forEach((c, idx) => {
     const isYellow = (c.card || '').toLowerCase().includes('yellow');
+    const isHome = c.homeFault ? true : (c.awayFault ? false : (c.team === 'home' || c.team === '1'));
     result.push({
       id: c.id || `card-${idx}`,
       time: parseInt(c.time, 10) || 0,
       type: isYellow ? 'yellow_card' : 'red_card',
-      teamId: c.homeFault ? 'home' : 'away',
-      player: c.homeFault || c.awayFault || 'Thẻ phạt'
+      teamId: isHome ? 'home' : 'away',
+      player: c.homeFault || c.awayFault || c.player || (isYellow ? 'Thẻ vàng' : 'Thẻ đỏ')
     });
   });
 
   // 3. Substitutions
   substitutions.forEach((s, idx) => {
+    let teamId: string = 'home';
+    if (s.team) {
+      const t = String(s.team).toLowerCase().trim();
+      if (t === 'home' || t === '1') {
+        teamId = 'home';
+      } else if (t === 'away' || t === '2') {
+        teamId = 'away';
+      } else {
+        teamId = s.team;
+      }
+    } else if (s.homePlayerIn || s.homePlayerOut) {
+      teamId = 'home';
+    } else if (s.awayPlayerIn || s.awayPlayerOut) {
+      teamId = 'away';
+    }
+
+    let playerIn = s.playerIn || s.player_in || s.in || s.homePlayerIn || s.awayPlayerIn || '';
+    let playerOut = s.playerOut || s.player_out || s.out || s.homePlayerOut || s.awayPlayerOut || '';
+
+    // Goal API format: "substitution": "PlayerOut | PlayerIn"
+    if (s.substitution && typeof s.substitution === 'string') {
+      const parts = s.substitution.split(/[|/]/).map((p: string) => p.trim());
+      if (parts.length >= 2) {
+        if (!playerOut) playerOut = parts[0];
+        if (!playerIn) playerIn = parts[1];
+      } else if (parts.length === 1 && parts[0] && !playerIn) {
+        playerIn = parts[0];
+      }
+    }
+
+    const finalPlayerIn = playerIn || s.player || 'Vào sân';
+    const finalPlayerOut = playerOut || undefined;
+
     result.push({
       id: s.id || `sub-${idx}`,
       time: parseInt(s.time, 10) || 0,
       type: 'substitution',
-      teamId: s.homePlayerIn ? 'home' : 'away',
-      player: s.homePlayerIn || s.awayPlayerIn || 'Vào sân',
-      assistPlayer: s.homePlayerOut || s.awayPlayerOut || undefined,
-      detail: 'Thay người'
+      teamId,
+      player: finalPlayerIn,
+      assistPlayer: finalPlayerOut,
+      detail: finalPlayerOut ? `Thay cho: ${finalPlayerOut}` : 'Thay người'
     });
   });
 
