@@ -272,7 +272,11 @@ export const BettingAnalyticsTab: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
                 <XAxis dataKey="timestamp" stroke="#94a3b8" fontSize={12} />
                 <YAxis stroke="#94a3b8" fontSize={12} domain={['auto', 'auto']} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} 
+                  itemStyle={{ color: '#f8fafc', fontWeight: 500 }}
+                  labelStyle={{ color: '#ffffff', fontWeight: 700, marginBottom: '4px' }}
+                />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 <Line type="monotone" dataKey="homeWin" name="Chủ thắng (Home Win)" stroke="#10b981" strokeWidth={2} />
                 <Line type="monotone" dataKey="draw" name="Hòa (Draw)" stroke="#8b5cf6" strokeWidth={2} />

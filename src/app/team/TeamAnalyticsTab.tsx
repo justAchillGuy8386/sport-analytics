@@ -582,6 +582,8 @@ export const TeamAnalyticsTab: React.FC<TeamAnalyticsTabProps> = ({ initialTeamS
                     color: '#fff',
                     boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
                   }} 
+                  itemStyle={{ color: '#f8fafc', fontWeight: 500 }}
+                  labelStyle={{ color: '#ffffff', fontWeight: 700, marginBottom: '4px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 <Bar dataKey="wins" name="Số trận thắng" fill="#10b981" radius={[4, 4, 0, 0]} />

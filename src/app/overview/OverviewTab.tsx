@@ -211,7 +211,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ 
+                    backgroundColor: '#0f172a', 
+                    borderColor: '#334155', 
+                    borderRadius: '12px', 
+                    fontSize: '12px',
+                    color: '#ffffff',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
+                  }}
+                  itemStyle={{ color: '#f8fafc', fontWeight: 500 }}
+                  labelStyle={{ color: '#ffffff', fontWeight: 700, marginBottom: '4px' }}
                   labelFormatter={(label) => COMPETITIONS.find(c => c.id === label)?.name || label}
                 />
                 <Bar dataKey="avgGoals" name="Trung bình bàn thắng" radius={[6, 6, 0, 0]}>
@@ -400,7 +409,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                    contentStyle={{ 
+                      backgroundColor: '#0f172a', 
+                      borderColor: '#334155', 
+                      borderRadius: '12px', 
+                      fontSize: '12px',
+                      color: '#ffffff',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
+                    }}
+                    itemStyle={{ color: '#f8fafc', fontWeight: 500 }}
+                    labelStyle={{ color: '#ffffff', fontWeight: 700, marginBottom: '4px' }}
                     labelFormatter={(label) => COMPETITIONS.find(c => c.id === label)?.name || label}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
