@@ -118,14 +118,6 @@ export const Sidebar: React.FC = () => {
               </p>
             </div>
           </Link>
-
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden p-2 text-slate-400 hover:text-white rounded-xl bg-slate-900 border border-slate-800 active:scale-95 transition-all"
-            aria-label="Close menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Scrollable Center Content - Smooth internal scrolling*/}
