@@ -165,15 +165,46 @@ interface MatchGroup {
       dateMap.get(dateKey)!.push(m);
     }
 
-    // Sort date keys (descending for past dates, ascending for upcoming)
+    // Sort date keys according to active status filter:
+    const now = Date.now();
     const sortedKeys = Array.from(dateMap.keys()).sort((a, b) => {
+      // 1. Prioritize any date that contains a LIVE match
+      const matchesA = dateMap.get(a) || [];
+      const matchesB = dateMap.get(b) || [];
+      const hasLiveA = matchesA.some(m => m.status === 'LIVE');
+      const hasLiveB = matchesB.some(m => m.status === 'LIVE');
+      if (hasLiveA && !hasLiveB) return -1;
+      if (!hasLiveA && hasLiveB) return 1;
+
       const timeA = new Date(a).getTime() || 0;
       const timeB = new Date(b).getTime() || 0;
+
+      // 2. If viewing FINISHED: newest completed matches first (e.g. Sep 2026 -> Aug 2026)
+      if (statusFilter === 'FINISHED') {
+        return timeB - timeA;
+      }
+
+      // 3. If viewing UPCOMING: nearest upcoming matches first (e.g. Oct 2026 -> May 2027)
+      if (statusFilter === 'UPCOMING') {
+        return timeA - timeB;
+      }
+
+      // 4. Default 'ALL': Sort by proximity to current time (closest round/matchday first)
+      const diffA = Math.abs(timeA - now);
+      const diffB = Math.abs(timeB - now);
+      if (diffA !== diffB) return diffA - diffB;
       return timeB - timeA;
     });
 
     const dateGroups: MatchGroup[] = sortedKeys.map(k => {
-      const matchesOnDate = dateMap.get(k) || [];
+      const matchesOnDate = (dateMap.get(k) || []).slice().sort((a, b) => {
+        if (a.status === 'LIVE' && b.status !== 'LIVE') return -1;
+        if (b.status === 'LIVE' && a.status !== 'LIVE') return 1;
+        const timeA = new Date(a.date).getTime() || 0;
+        const timeB = new Date(b.date).getTime() || 0;
+        return timeA - timeB;
+      });
+
       return {
         key: k,
         title: formatDateGroup(k !== 'undated' ? k : undefined),
