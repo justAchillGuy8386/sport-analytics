@@ -40,7 +40,7 @@ export const Sidebar: React.FC = () => {
     { href: '/overview', label: 'Tổng quan', icon: BarChart3 },
     { href: '/competition', label: 'BXH & Giải đấu', icon: Trophy },
     { href: '/team', label: 'Phân tích Đội bóng', icon: Users },
-    { href: '/match', label: 'Match Center', icon: Swords },
+    { href: '/match', label: 'Phân tích Trận đấu', icon: Swords },
     { href: '/betting', label: 'Odds & Kèo Châu Á', icon: Calculator },
     { href: '/etl', label: 'ETL & Quota Monitor', icon: Database },
   ];
